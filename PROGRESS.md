@@ -4,7 +4,7 @@
 - [ ] AGENTS.md
 - [ ] ARCHITECTURE.md
 - [ ] CLAUDE.md
-- [ ] CONTRIBUTING.md
+- [x] CONTRIBUTING.md (已翻譯成 CONTRIBUTING_zh_TW.md)
 - [ ] GEMINI.md
 - [x] README.md (已翻譯成 README_zh_TW.md)
 - [ ] ci_cd/TEST_KEY_PATTERNS.md
