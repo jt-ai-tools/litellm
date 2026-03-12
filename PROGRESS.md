@@ -1,7 +1,7 @@
 # 翻譯進度 PROGRESS.md
 
 ## 待處理清單
-- [ ] AGENTS.md
+- [x] AGENTS.md (已翻譯成 AGENTS_zh_TW.md)
 - [x] ARCHITECTURE.md (已翻譯成 ARCHITECTURE_zh_TW.md)
 - [ ] CLAUDE.md
 - [x] CONTRIBUTING.md (已翻譯成 CONTRIBUTING_zh_TW.md)
