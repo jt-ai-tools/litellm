@@ -6,7 +6,7 @@
 - [ ] CLAUDE.md
 - [ ] CONTRIBUTING.md
 - [ ] GEMINI.md
-- [ ] README.md
+- [x] README.md (已翻譯成 README_zh_TW.md)
 - [ ] ci_cd/TEST_KEY_PATTERNS.md
 - [ ] ci_cd/security_scans_readme.md
 - [ ] cookbook/ai_coding_tool_guides/claude_code_quickstart/guide.md

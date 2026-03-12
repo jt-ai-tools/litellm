@@ -2,8 +2,7 @@
         🚅 LiteLLM
     </h1>
     <p align="center">
-        <p align="center">Call 100+ LLMs in OpenAI format. [Bedrock, Azure, OpenAI, VertexAI, Anthropic, Groq, etc.]
-        </p>
+        <p align="center">使用 OpenAI 格式呼叫 100+ 種 LLM。[Bedrock, Azure, OpenAI, VertexAI, Anthropic, Groq 等]</p>
         <p align="center">
         <a href="https://render.com/deploy?repo=https://github.com/BerriAI/litellm" target="_blank" rel="nofollow"><img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render"></a>
         <a href="https://railway.app/template/HLP0Ub?referralCode=jch2ME">
@@ -11,7 +10,7 @@
         </a>
         </p>
     </p>
-<h4 align="center"><a href="https://docs.litellm.ai/docs/simple_proxy" target="_blank">LiteLLM Proxy Server (AI Gateway)</a> | <a href="https://docs.litellm.ai/docs/enterprise#hosted-litellm-proxy" target="_blank"> Hosted Proxy</a> | <a href="https://docs.litellm.ai/docs/enterprise"target="_blank">Enterprise Tier</a></h4>
+<h4 align="center"><a href="https://docs.litellm.ai/docs/simple_proxy" target="_blank">LiteLLM Proxy Server (AI 閘道器)</a> | <a href="https://docs.litellm.ai/docs/enterprise#hosted-litellm-proxy" target="_blank"> 代管 Proxy</a> | <a href="https://docs.litellm.ai/docs/enterprise"target="_blank">企業版</a></h4>
 <h4 align="center">
     <a href="https://pypi.org/project/litellm/" target="_blank">
         <img src="https://img.shields.io/pypi/v/litellm.svg" alt="PyPI Version">
@@ -31,18 +30,18 @@
 </h4>
 
 <p align="center">
-    <b>English | <a href="README_zh_TW.md">繁體中文</a></b>
+    <b><a href="README.md">English</a> | 繁體中文</b>
 </p>
 
 <img width="2688" height="1600" alt="Group 7154 (1)" src="https://github.com/user-attachments/assets/c5ee0412-6fb5-4fb6-ab5b-bafae4209ca6" />
 
 
-## Use LiteLLM for
+## LiteLLM 用於
 
 <details open>
-<summary><b>LLMs</b> - Call 100+ LLMs (Python SDK + AI Gateway)</summary>
+<summary><b>LLMs</b> - 呼叫 100+ 種 LLM (Python SDK + AI 閘道器)</summary>
 
-[**All Supported Endpoints**](https://docs.litellm.ai/docs/supported_endpoints) - `/chat/completions`, `/responses`, `/embeddings`, `/images`, `/audio`, `/batches`, `/rerank`, `/a2a`, `/messages` and more.
+[**所有支援的端點**](https://docs.litellm.ai/docs/supported_endpoints) - `/chat/completions`, `/responses`, `/embeddings`, `/images`, `/audio`, `/batches`, `/rerank`, `/a2a`, `/messages` 等。
 
 ### Python SDK
 
@@ -64,9 +63,9 @@ response = completion(model="openai/gpt-4o", messages=[{"role": "user", "content
 response = completion(model="anthropic/claude-sonnet-4-20250514", messages=[{"role": "user", "content": "Hello!"}])
 ```
 
-### AI Gateway (Proxy Server)
+### AI 閘道器 (Proxy Server)
 
-[**Getting Started - E2E Tutorial**](https://docs.litellm.ai/docs/proxy/docker_quick_start) - Setup virtual keys, make your first request
+[**開始使用 - 端到端教學**](https://docs.litellm.ai/docs/proxy/docker_quick_start) - 設定虛擬金鑰，發送您的第一個請求
 
 ```shell
 pip install 'litellm[proxy]'
@@ -83,16 +82,16 @@ response = client.chat.completions.create(
 )
 ```
 
-[**Docs: LLM Providers**](https://docs.litellm.ai/docs/providers)
+[**文件：LLM 供應商**](https://docs.litellm.ai/docs/providers)
 
 </details>
 
 <details>
-<summary><b>Agents</b> - Invoke A2A Agents (Python SDK + AI Gateway)</summary>
+<summary><b>Agents</b> - 呼叫 A2A 代理 (Python SDK + AI 閘道器)</summary>
 
-[**Supported Providers**](https://docs.litellm.ai/docs/a2a#add-a2a-agents) - LangGraph, Vertex AI Agent Engine, Azure AI Foundry, Bedrock AgentCore, Pydantic AI
+[**支援的供應商**](https://docs.litellm.ai/docs/a2a#add-a2a-agents) - LangGraph, Vertex AI Agent Engine, Azure AI Foundry, Bedrock AgentCore, Pydantic AI
 
-### Python SDK - A2A Protocol
+### Python SDK - A2A 協定
 
 ```python
 from litellm.a2a_protocol import A2AClient
@@ -114,11 +113,11 @@ request = SendMessageRequest(
 response = await client.send_message(request)
 ```
 
-### AI Gateway (Proxy Server)
+### AI 閘道器 (Proxy Server)
 
-**Step 1.** [Add your Agent to the AI Gateway](https://docs.litellm.ai/docs/a2a#adding-your-agent)
+**步驟 1.** [將您的代理加入 AI 閘道器](https://docs.litellm.ai/docs/a2a#adding-your-agent)
 
-**Step 2.** Call Agent via A2A SDK
+**步驟 2.** 透過 A2A SDK 呼叫代理
 
 ```python
 from a2a.client import A2ACardResolver, A2AClient
@@ -126,8 +125,8 @@ from a2a.types import MessageSendParams, SendMessageRequest
 from uuid import uuid4
 import httpx
 
-base_url = "http://localhost:4000/a2a/my-agent"  # LiteLLM proxy + agent name
-headers = {"Authorization": "Bearer sk-1234"}    # LiteLLM Virtual Key
+base_url = "http://localhost:4000/a2a/my-agent"  # LiteLLM proxy + 代理名稱
+headers = {"Authorization": "Bearer sk-1234"}    # LiteLLM 虛擬金鑰
 
 async with httpx.AsyncClient(headers=headers) as httpx_client:
     resolver = A2ACardResolver(httpx_client=httpx_client, base_url=base_url)
@@ -147,14 +146,14 @@ async with httpx.AsyncClient(headers=headers) as httpx_client:
     response = await client.send_message(request)
 ```
 
-[**Docs: A2A Agent Gateway**](https://docs.litellm.ai/docs/a2a)
+[**文件：A2A 代理閘道器**](https://docs.litellm.ai/docs/a2a)
 
 </details>
 
 <details>
-<summary><b>MCP Tools</b> - Connect MCP servers to any LLM (Python SDK + AI Gateway)</summary>
+<summary><b>MCP 工具</b> - 將 MCP 伺服器連接到任何 LLM (Python SDK + AI 閘道器)</summary>
 
-### Python SDK - MCP Bridge
+### Python SDK - MCP 橋接
 
 ```python
 from mcp import ClientSession, StdioServerParameters
@@ -168,10 +167,10 @@ async with stdio_client(server_params) as (read, write):
     async with ClientSession(read, write) as session:
         await session.initialize()
 
-        # Load MCP tools in OpenAI format
+        # 以 OpenAI 格式載入 MCP 工具
         tools = await experimental_mcp_client.load_mcp_tools(session=session, format="openai")
 
-        # Use with any LiteLLM model
+        # 與任何 LiteLLM 模型搭配使用
         response = await litellm.acompletion(
             model="gpt-4o",
             messages=[{"role": "user", "content": "What's 3 + 5?"}],
@@ -179,11 +178,11 @@ async with stdio_client(server_params) as (read, write):
         )
 ```
 
-### AI Gateway - MCP Gateway
+### AI 閘道器 - MCP 閘道器
 
-**Step 1.** [Add your MCP Server to the AI Gateway](https://docs.litellm.ai/docs/mcp#adding-your-mcp)
+**步驟 1.** [將您的 MCP 伺服器加入 AI 閘道器](https://docs.litellm.ai/docs/mcp#adding-your-mcp)
 
-**Step 2.** Call MCP tools via `/chat/completions`
+**步驟 2.** 透過 `/chat/completions` 呼叫 MCP 工具
 
 ```bash
 curl -X POST 'http://0.0.0.0:4000/v1/chat/completions' \
@@ -201,7 +200,7 @@ curl -X POST 'http://0.0.0.0:4000/v1/chat/completions' \
   }'
 ```
 
-### Use with Cursor IDE
+### 在 Cursor IDE 中使用
 
 ```json
 {
@@ -216,53 +215,53 @@ curl -X POST 'http://0.0.0.0:4000/v1/chat/completions' \
 }
 ```
 
-[**Docs: MCP Gateway**](https://docs.litellm.ai/docs/mcp)
+[**文件：MCP 閘道器**](https://docs.litellm.ai/docs/mcp)
 
 </details>
 
 ---
 
-## How to use LiteLLM
+## 如何使用 LiteLLM
 
-You can use LiteLLM through either the Proxy Server or Python SDK. Both gives you a unified interface to access multiple LLMs (100+ LLMs). Choose the option that best fits your needs:
+您可以透過 Proxy Server 或 Python SDK 使用 LiteLLM。兩者都提供統一的介面來存取多個 LLM (100+ LLM)。請選擇最適合您需求的選項：
 
 <table style={{width: '100%', tableLayout: 'fixed'}}>
 <thead>
 <tr>
 <th style={{width: '14%'}}></th>
-<th style={{width: '43%'}}><strong><a href="https://docs.litellm.ai/docs/simple_proxy">LiteLLM AI Gateway</a></strong></th>
+<th style={{width: '43%'}}><strong><a href="https://docs.litellm.ai/docs/simple_proxy">LiteLLM AI 閘道器</a></strong></th>
 <th style={{width: '43%'}}><strong><a href="https://docs.litellm.ai/docs/">LiteLLM Python SDK</a></strong></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style={{width: '14%'}}><strong>Use Case</strong></td>
-<td style={{width: '43%'}}>Central service (LLM Gateway) to access multiple LLMs</td>
-<td style={{width: '43%'}}>Use LiteLLM directly in your Python code</td>
+<td style={{width: '14%'}}><strong>使用情境</strong></td>
+<td style={{width: '43%'}}>存取多個 LLM 的中央服務 (LLM 閘道器)</td>
+<td style={{width: '43%'}}>直接在您的 Python 程式碼中使用 LiteLLM</td>
 </tr>
 <tr>
-<td style={{width: '14%'}}><strong>Who Uses It?</strong></td>
-<td style={{width: '43%'}}>Gen AI Enablement / ML Platform Teams</td>
-<td style={{width: '43%'}}>Developers building LLM projects</td>
+<td style={{width: '14%'}}><strong>誰會使用？</strong></td>
+<td style={{width: '43%'}}>生成式 AI 賦能 / ML 平台團隊</td>
+<td style={{width: '43%'}}>構建 LLM 專案的開發者</td>
 </tr>
 <tr>
-<td style={{width: '14%'}}><strong>Key Features</strong></td>
-<td style={{width: '43%'}}>Centralized API gateway with authentication and authorization, multi-tenant cost tracking and spend management per project/user, per-project customization (logging, guardrails, caching), virtual keys for secure access control, admin dashboard UI for monitoring and management</td>
-<td style={{width: '43%'}}>Direct Python library integration in your codebase, Router with retry/fallback logic across multiple deployments (e.g. Azure/OpenAI) - <a href="https://docs.litellm.ai/docs/routing">Router</a>, application-level load balancing and cost tracking, exception handling with OpenAI-compatible errors, observability callbacks (Lunary, MLflow, Langfuse, etc.)</td>
+<td style={{width: '14%'}}><strong>核心功能</strong></td>
+<td style={{width: '43%'}}>具備身份驗證與授權的集中式 API 閘道器、按專案/使用者進行的多租戶成本追蹤與支出管理、按專案自定義（日誌、護欄、快取）、用於安全存取控制的虛擬金鑰、用於監控與管理的管理員儀表板 UI</td>
+<td style={{width: '43%'}}>直接整合到您的程式碼庫中的 Python 函式庫、具備跨多個部署（例如 Azure/OpenAI）重試/回退邏輯的路由器 - <a href="https://docs.litellm.ai/docs/routing">Router</a>、應用程式級別的負載平衡與成本追蹤、OpenAI 相容錯誤的異常處理、可觀測性回調（Lunary, MLflow, Langfuse 等）</td>
 </tr>
 </tbody>
 </table>
 
-LiteLLM Performance: **8ms P95 latency** at 1k RPS (See benchmarks [here](https://docs.litellm.ai/docs/benchmarks))
+LiteLLM 效能：在 1k RPS 下 **8ms P95 延遲**（參見基準測試 [此處](https://docs.litellm.ai/docs/benchmarks)）
 
-[**Jump to LiteLLM Proxy (LLM Gateway) Docs**](https://docs.litellm.ai/docs/simple_proxy) <br>
-[**Jump to Supported LLM Providers**](https://docs.litellm.ai/docs/providers)
+[**跳轉至 LiteLLM Proxy (LLM 閘道器) 文件**](https://docs.litellm.ai/docs/simple_proxy) <br>
+[**跳轉至支援的 LLM 供應商**](https://docs.litellm.ai/docs/providers)
 
-**Stable Release:** Use docker images with the `-stable` tag. These have undergone 12 hour load tests, before being published. [More information about the release cycle here](https://docs.litellm.ai/docs/proxy/release_cycle)
+**穩定版本：** 請使用帶有 `-stable` 標籤的 Docker 映像。這些映像在發布前都經過了 12 小時的負載測試。[關於發布週期的更多資訊請點擊此處](https://docs.litellm.ai/docs/proxy/release_cycle)
 
-Support for more providers. Missing a provider or LLM Platform, raise a [feature request](https://github.com/BerriAI/litellm/issues/new?assignees=&labels=enhancement&projects=&template=feature_request.yml&title=%5BFeature%5D%3A+).
+支援更多供應商。如果缺少供應商或 LLM 平台，請提出 [功能請求](https://github.com/BerriAI/litellm/issues/new?assignees=&labels=enhancement&projects=&template=feature_request.yml&title=%5BFeature%5D%3A+)。
 
-## OSS Adopters 
+## OSS 採用者 
 
 <table>
   <tr>
@@ -275,9 +274,9 @@ Support for more providers. Missing a provider or LLM Platform, raise a [feature
   </tr>
 </table>
 
-## Supported Providers ([Website Supported Models](https://models.litellm.ai/) | [Docs](https://docs.litellm.ai/docs/providers))
+## 支援的供應商 ([網站支援的模型](https://models.litellm.ai/) | [文件](https://docs.litellm.ai/docs/providers))
 
-| Provider                                                                            | `/chat/completions` | `/messages` | `/responses` | `/embeddings` | `/image/generations` | `/audio/transcriptions` | `/audio/speech` | `/moderations` | `/batches` | `/rerank` |
+| 供應商                                                                            | `/chat/completions` | `/messages` | `/responses` | `/embeddings` | `/image/generations` | `/audio/transcriptions` | `/audio/speech` | `/moderations` | `/batches` | `/rerank` |
 |-------------------------------------------------------------------------------------|---------------------|-------------|--------------|---------------|----------------------|-------------------------|-----------------|----------------|-----------|-----------|
 | [Abliteration (`abliteration`)](https://docs.litellm.ai/docs/providers/abliteration) | ✅ |  |  |  |  |  |  |  |  |  |
 | [AI/ML API (`aiml`)](https://docs.litellm.ai/docs/providers/aiml) | ✅ | ✅ | ✅ | ✅ | ✅ |  |  |  |  |  |
@@ -380,87 +379,87 @@ Support for more providers. Missing a provider or LLM Platform, raise a [feature
 | [xAI (`xai`)](https://docs.litellm.ai/docs/providers/xai) | ✅ | ✅ | ✅ |  |  |  |  |  |  |  |
 | [Xinference (`xinference`)](https://docs.litellm.ai/docs/providers/xinference) |  |  |  | ✅ |  |  |  |  |  |  |
 
-[**Read the Docs**](https://docs.litellm.ai/docs/)
+[**閱讀文件**](https://docs.litellm.ai/docs/)
 
-## Run in Developer mode
-### Services
-1. Setup .env file in root
-2. Run dependant services `docker-compose up db prometheus`
+## 在開發者模式下運行
+### 服務
+1. 在根目錄設定 .env 檔案
+2. 運行依賴服務 `docker-compose up db prometheus`
 
-### Backend
-1. (In root) create virtual environment `python -m venv .venv`
-2. Activate virtual environment `source .venv/bin/activate`
-3. Install dependencies `pip install -e ".[all]"`
+### 後端
+1. (在根目錄) 建立虛擬環境 `python -m venv .venv`
+2. 啟動虛擬環境 `source .venv/bin/activate`
+3. 安裝依賴 `pip install -e ".[all]"`
 4. `pip install prisma`
 5. `prisma generate`
-6. Start proxy backend `python litellm/proxy/proxy_cli.py`
+6. 啟動代理後端 `python litellm/proxy/proxy_cli.py`
 
-### Frontend
-1. Navigate to `ui/litellm-dashboard`
-2. Install dependencies `npm install`
-3. Run `npm run dev` to start the dashboard
+### 前端
+1. 進入 `ui/litellm-dashboard`
+2. 安裝依賴 `npm install`
+3. 運行 `npm run dev` 啟動儀表板
 
-# Enterprise
-For companies that need better security, user management and professional support
+# 企業版
+適用於需要更佳安全性、使用者管理與專業支援的公司
 
-[Talk to founders](https://calendly.com/d/cx9p-5yf-2nm/litellm-introductions)
+[與創辦人對談](https://calendly.com/d/cx9p-5yf-2nm/litellm-introductions)
 
-This covers:
-- ✅ **Features under the [LiteLLM Commercial License](https://docs.litellm.ai/docs/proxy/enterprise):**
-- ✅ **Feature Prioritization**
-- ✅ **Custom Integrations**
-- ✅ **Professional Support - Dedicated discord + slack**
-- ✅ **Custom SLAs**
-- ✅ **Secure access with Single Sign-On**
+涵蓋內容：
+- ✅ **[LiteLLM 商業授權](https://docs.litellm.ai/docs/proxy/enterprise)下的功能**
+- ✅ **功能優先級排序**
+- ✅ **自定義整合**
+- ✅ **專業支援 - 專屬 Discord + Slack 頻道**
+- ✅ **自定義 SLA**
+- ✅ **透過單一登入 (SSO) 實現安全存取**
 
-# Contributing
+# 貢獻
 
-We welcome contributions to LiteLLM! Whether you're fixing bugs, adding features, or improving documentation, we appreciate your help.
+我們歡迎對 LiteLLM 的貢獻！無論是修復 Bug、增加功能或改進文件，我們都非常感謝您的幫助。
 
-## Quick Start for Contributors
+## 貢獻者快速入門
 
-This requires poetry to be installed.
+這需要安裝 Poetry。
 
 ```bash
 git clone https://github.com/BerriAI/litellm.git
 cd litellm
-make install-dev    # Install development dependencies
-make format         # Format your code
-make lint           # Run all linting checks
-make test-unit      # Run unit tests
-make format-check   # Check formatting only
+make install-dev    # 安裝開發依賴
+make format         # 格式化程式碼
+make lint           # 執行所有 Lint 檢查
+make test-unit      # 執行單元測試
+make format-check   # 僅檢查格式
 ```
 
-For detailed contributing guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+詳細的貢獻指南，請參閱 [CONTRIBUTING.md](CONTRIBUTING_zh_TW.md) (翻譯中)。
 
-## Code Quality / Linting
+## 程式碼品質 / Linting
 
-LiteLLM follows the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html).
+LiteLLM 遵循 [Google Python 風格指南](https://google.github.io/styleguide/pyguide.html)。
 
-Our automated checks include:
-- **Black** for code formatting
-- **Ruff** for linting and code quality
-- **MyPy** for type checking
-- **Circular import detection**
-- **Import safety checks**
-
-
-All these checks must pass before your PR can be merged.
+我們的自動化檢查包括：
+- **Black** 用於程式碼格式化
+- **Ruff** 用於 Lint 與程式碼品質檢查
+- **MyPy** 用於型別檢查
+- **循環導入檢測**
+- **導入安全性檢查**
 
 
-# Support / talk with founders
+在您的 PR 被合併前，所有這些檢查都必須通過。
 
-- [Schedule Demo 👋](https://calendly.com/d/4mp-gd3-k5k/berriai-1-1-onboarding-litellm-hosted-version)
-- [Community Discord 💭](https://discord.gg/wuPM9dRgDw)
-- [Community Slack 💭](https://www.litellm.ai/support)
-- Our numbers 📞 +1 (770) 8783-106 / ‭+1 (412) 618-6238‬
-- Our emails ✉️ ishaan@berri.ai / krrish@berri.ai
 
-# Why did we build this
+# 支援 / 與創辦人對談
 
-- **Need for simplicity**: Our code started to get extremely complicated managing & translating calls between Azure, OpenAI and Cohere.
+- [預約示範 👋](https://calendly.com/d/4mp-gd3-k5k/berriai-1-1-onboarding-litellm-hosted-version)
+- [社群 Discord 💭](https://discord.gg/wuPM9dRgDw)
+- [社群 Slack 💭](https://www.litellm.ai/support)
+- 我們的電話 📞 +1 (770) 8783-106 / ‭+1 (412) 618-6238‬
+- 我們的電子郵件 ✉️ ishaan@berri.ai / krrish@berri.ai
 
-# Contributors
+# 為什麼我們開發這個
+
+- **對簡潔性的追求**：隨著我們開始管理並在 Azure、OpenAI 和 Cohere 之間轉換呼叫，我們的程式碼變得極其複雜。
+
+# 貢獻者
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
@@ -474,4 +473,3 @@ All these checks must pass before your PR can be merged.
 <a href="https://github.com/BerriAI/litellm/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=BerriAI/litellm" />
 </a>
-
