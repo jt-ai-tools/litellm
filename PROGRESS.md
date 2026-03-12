@@ -2,7 +2,7 @@
 
 ## 待處理清單
 - [ ] AGENTS.md
-- [ ] ARCHITECTURE.md
+- [x] ARCHITECTURE.md (已翻譯成 ARCHITECTURE_zh_TW.md)
 - [ ] CLAUDE.md
 - [x] CONTRIBUTING.md (已翻譯成 CONTRIBUTING_zh_TW.md)
 - [ ] GEMINI.md
