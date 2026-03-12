@@ -7,11 +7,11 @@
 - [x] CONTRIBUTING.md (已翻譯成 CONTRIBUTING_zh_TW.md)
 - [x] GEMINI.md (已翻譯成 GEMINI_zh_TW.md)
 - [x] README.md (已翻譯成 README_zh_TW.md)
-- [ ] ci_cd/TEST_KEY_PATTERNS.md
-- [ ] ci_cd/security_scans_readme.md
-- [ ] cookbook/ai_coding_tool_guides/claude_code_quickstart/guide.md
-- [ ] cookbook/anthropic_agent_sdk/README.md
-- [ ] cookbook/benchmark/readme.md
+- [x] ci_cd/TEST_KEY_PATTERNS.md (已翻譯成 ci_cd/TEST_KEY_PATTERNS_zh_TW.md)
+- [x] ci_cd/security_scans_readme.md (已翻譯成 ci_cd/security_scans_readme_zh_TW.md)
+- [x] cookbook/ai_coding_tool_guides/claude_code_quickstart/guide.md (已翻譯成 cookbook/ai_coding_tool_guides/claude_code_quickstart/guide_zh_TW.md)
+- [x] cookbook/anthropic_agent_sdk/README.md (已翻譯成 cookbook/anthropic_agent_sdk/README_zh_TW.md)
+- [x] cookbook/benchmark/readme.md (已翻譯成 cookbook/benchmark/readme_zh_TW.md)
 - [ ] cookbook/gollem_go_agent_framework/README.md
 - [ ] cookbook/litellm_proxy_server/braintrust_prompt_wrapper_README.md
 - [ ] cookbook/litellm_proxy_server/grafana_dashboard/dashboard_1/readme.md
