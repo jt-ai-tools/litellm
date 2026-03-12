@@ -73,13 +73,13 @@
 - [ ] docs/my-website/docs/caching/all_caches.md
 - [ ] docs/my-website/docs/caching/caching_api.md
 - [ ] docs/my-website/docs/caching/local_caching.md
-- [ ] docs/my-website/docs/completion/audio.md
-- [ ] docs/my-website/docs/completion/batching.md
-- [ ] docs/my-website/docs/completion/computer_use.md
-- [ ] docs/my-website/docs/completion/document_understanding.md
-- [ ] docs/my-website/docs/completion/drop_params.md
-- [ ] docs/my-website/docs/completion/function_call.md
-- [ ] docs/my-website/docs/completion/http_handler_config.md
+- [x] docs/my-website/docs/completion/audio.md (已翻譯成 docs/my-website/docs/completion/audio_zh_TW.md)
+- [x] docs/my-website/docs/completion/batching.md (已翻譯成 docs/my-website/docs/completion/batching_zh_TW.md)
+- [x] docs/my-website/docs/completion/computer_use.md (已翻譯成 docs/my-website/docs/completion/computer_use_zh_TW.md)
+- [x] docs/my-website/docs/completion/document_understanding.md (已翻譯成 docs/my-website/docs/completion/document_understanding_zh_TW.md)
+- [x] docs/my-website/docs/completion/drop_params.md (已翻譯成 docs/my-website/docs/completion/drop_params_zh_TW.md)
+- [x] docs/my-website/docs/completion/function_call.md (已翻譯成 docs/my-website/docs/completion/function_call_zh_TW.md)
+- [x] docs/my-website/docs/completion/http_handler_config.md (已翻譯成 docs/my-website/docs/completion/http_handler_config_zh_TW.md)
 - [ ] docs/my-website/docs/completion/image_generation_chat.md
 - [ ] docs/my-website/docs/completion/input.md
 - [ ] docs/my-website/docs/completion/json_mode.md
