@@ -17,11 +17,11 @@
 - [x] cookbook/litellm_proxy_server/grafana_dashboard/dashboard_1/readme.md (已翻譯成 cookbook/litellm_proxy_server/grafana_dashboard/dashboard_1/readme_zh_TW.md)
 - [x] cookbook/litellm_proxy_server/grafana_dashboard/readme.md (已翻譯成 cookbook/litellm_proxy_server/grafana_dashboard/readme_zh_TW.md)
 - [x] cookbook/litellm_proxy_server/readme.md (已翻譯成 cookbook/litellm_proxy_server/readme_zh_TW.md)
-- [ ] cookbook/livekit_agent_sdk/README.md
-- [ ] cookbook/misc/RELEASE_NOTES_GENERATION_INSTRUCTIONS.md
-- [ ] cookbook/mock_prompt_management_server/README.md
-- [ ] deploy/charts/litellm-helm/README.md
-- [ ] docker/README.md
+- [x] cookbook/livekit_agent_sdk/README.md (已翻譯成 cookbook/livekit_agent_sdk/README_zh_TW.md)
+- [x] cookbook/misc/RELEASE_NOTES_GENERATION_INSTRUCTIONS.md (已翻譯成 cookbook/misc/RELEASE_NOTES_GENERATION_INSTRUCTIONS_zh_TW.md)
+- [x] cookbook/mock_prompt_management_server/README.md (已翻譯成 cookbook/mock_prompt_management_server/README_zh_TW.md)
+- [x] deploy/charts/litellm-helm/README.md (已翻譯成 deploy/charts/litellm-helm/README_zh_TW.md)
+- [x] docker/README.md (已翻譯成 docker/README_zh_TW.md)
 - [ ] docker/build_from_pip/Readme.md
 - [ ] docs/my-website/README.md
 - [ ] docs/my-website/blog/anthropic_opus_4_5_and_advanced_features/index.md
