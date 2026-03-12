@@ -5,7 +5,7 @@
 - [x] ARCHITECTURE.md (已翻譯成 ARCHITECTURE_zh_TW.md)
 - [ ] CLAUDE.md
 - [x] CONTRIBUTING.md (已翻譯成 CONTRIBUTING_zh_TW.md)
-- [ ] GEMINI.md
+- [x] GEMINI.md (已翻譯成 GEMINI_zh_TW.md)
 - [x] README.md (已翻譯成 README_zh_TW.md)
 - [ ] ci_cd/TEST_KEY_PATTERNS.md
 - [ ] ci_cd/security_scans_readme.md
