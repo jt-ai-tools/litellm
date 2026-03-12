@@ -12,11 +12,11 @@
 - [x] cookbook/ai_coding_tool_guides/claude_code_quickstart/guide.md (已翻譯成 cookbook/ai_coding_tool_guides/claude_code_quickstart/guide_zh_TW.md)
 - [x] cookbook/anthropic_agent_sdk/README.md (已翻譯成 cookbook/anthropic_agent_sdk/README_zh_TW.md)
 - [x] cookbook/benchmark/readme.md (已翻譯成 cookbook/benchmark/readme_zh_TW.md)
-- [ ] cookbook/gollem_go_agent_framework/README.md
-- [ ] cookbook/litellm_proxy_server/braintrust_prompt_wrapper_README.md
-- [ ] cookbook/litellm_proxy_server/grafana_dashboard/dashboard_1/readme.md
-- [ ] cookbook/litellm_proxy_server/grafana_dashboard/readme.md
-- [ ] cookbook/litellm_proxy_server/readme.md
+- [x] cookbook/gollem_go_agent_framework/README.md (已翻譯成 cookbook/gollem_go_agent_framework/README_zh_TW.md)
+- [x] cookbook/litellm_proxy_server/braintrust_prompt_wrapper_README.md (已翻譯成 cookbook/litellm_proxy_server/braintrust_prompt_wrapper_README_zh_TW.md)
+- [x] cookbook/litellm_proxy_server/grafana_dashboard/dashboard_1/readme.md (已翻譯成 cookbook/litellm_proxy_server/grafana_dashboard/dashboard_1/readme_zh_TW.md)
+- [x] cookbook/litellm_proxy_server/grafana_dashboard/readme.md (已翻譯成 cookbook/litellm_proxy_server/grafana_dashboard/readme_zh_TW.md)
+- [x] cookbook/litellm_proxy_server/readme.md (已翻譯成 cookbook/litellm_proxy_server/readme_zh_TW.md)
 - [ ] cookbook/livekit_agent_sdk/README.md
 - [ ] cookbook/misc/RELEASE_NOTES_GENERATION_INSTRUCTIONS.md
 - [ ] cookbook/mock_prompt_management_server/README.md
