@@ -20,10 +20,7 @@ permissions:
 jobs:
   record:
     name: "Record the e2e suite against real providers"
-    if: >-
-      (github.event_name != 'schedule' || github.repository == 'BerriAI/litellm') &&
-      (github.event.schedule == '0 8 * * 6' ||
-       (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'record'))
+    if: ${{ github.repository == 'BerriAI/litellm' && ((github.event_name != 'schedule' || github.repository == 'BerriAI/litellm') && (github.event.schedule == '0 8 * * 6' ||  (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'record'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     services:

@@ -86,6 +86,8 @@ jobs:
           --collect-only -q
 
       - name: Run benchmarks
+        env:
+          CODSPEED_SKIP_UPLOAD: ${{ github.repository != 'BerriAI/litellm' }}
         uses: CodSpeedHQ/action@1c8ae4843586d3ba879736b7f6b7b0c990757fab # v4.12.1
         with:
           mode: simulation

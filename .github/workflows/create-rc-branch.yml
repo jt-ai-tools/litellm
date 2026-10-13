@@ -11,7 +11,7 @@ permissions: {}
 jobs:
   create-rc-branch:
     name: Create RC Branch
-    if: github.event_name != 'schedule' || github.repository == 'BerriAI/litellm'
+    if: ${{ github.repository == 'BerriAI/litellm' && (github.event_name != 'schedule' || github.repository == 'BerriAI/litellm') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -68,6 +68,7 @@ jobs:
             core.info(`Created branch ${branchName} at ${context.sha}`);
 
   linear-release:
+    if: ${{ github.repository == 'BerriAI/litellm' }}
     name: Move the Linear release to rc
     needs: create-rc-branch
     permissions:

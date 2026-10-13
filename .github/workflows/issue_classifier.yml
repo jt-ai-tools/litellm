@@ -53,13 +53,7 @@ jobs:
 
   classify-issue:
     # An edit to a labelled issue is dropped here; the script decides the rest against the live labels
-    if: >-
-      github.event_name != 'pull_request'
-      && github.repository == 'BerriAI/litellm'
-      && (
-        github.event.action != 'edited'
-        || !contains(join(github.event.issue.labels.*.name, ','), 'domain:')
-      )
+    if: ${{ github.repository == 'BerriAI/litellm' && (github.event_name != 'pull_request' && github.repository == 'BerriAI/litellm' && (   github.event.action != 'edited'   || !contains(join(github.event.issue.labels.*.name, ','), 'domain:') )) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -131,7 +125,7 @@ jobs:
 
   label-issue:
     needs: classify-issue
-    if: needs.classify-issue.outputs.verdict != ''
+    if: ${{ github.repository == 'BerriAI/litellm' && (needs.classify-issue.outputs.verdict != '') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

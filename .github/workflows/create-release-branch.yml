@@ -26,6 +26,7 @@ permissions: {}
 
 jobs:
   create-branch:
+    if: ${{ github.repository == 'BerriAI/litellm' }}
     name: Create Release Branch
     runs-on: ubuntu-latest
     permissions:

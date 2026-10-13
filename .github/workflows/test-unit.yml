@@ -1450,7 +1450,7 @@ jobs:
             --cov=./litellm --cov-report=xml:coverage.xml
 
       - name: Upload redis-py ${{ matrix.redis-py }} coverage to Codecov
-        if: always() && steps.changes.outputs.decision != 'skip' && matrix.redis-py == '5.3.1'
+        if: ${{ github.repository == 'BerriAI/litellm' && (always() && steps.changes.outputs.decision != 'skip' && matrix.redis-py == '5.3.1') }}
         continue-on-error: true
         uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
         with:
@@ -1484,6 +1484,7 @@ jobs:
           merge-multiple: false
 
       - name: Upload to Codecov
+        if: ${{ github.repository == 'BerriAI/litellm' }}
         id: codecov-upload
         continue-on-error: true
         uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
@@ -1495,7 +1496,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Upload to Codecov (retry)
-        if: steps.codecov-upload.outcome == 'failure'
+        if: ${{ github.repository == 'BerriAI/litellm' && (steps.codecov-upload.outcome == 'failure') }}
         continue-on-error: true
         uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
         with:
@@ -1506,6 +1507,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Upload MCP server coverage under its own flag
+        if: ${{ github.repository == 'BerriAI/litellm' }}
         continue-on-error: true
         uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
         with:
