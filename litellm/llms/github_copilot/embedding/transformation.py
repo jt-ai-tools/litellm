@@ -6,9 +6,17 @@ This module provides the configuration for GitHub Copilot's Embedding API.
 Implementation based on analysis of the copilot-api project by caozhiyuan:
 https://github.com/caozhiyuan/copilot-api
 """
-from typing import TYPE_CHECKING, Any, Optional
+
+import os
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    cast,  # noqa: TID251  # narrows untyped request dicts at the session boundary
+)
 
 import httpx
+from pydantic import ConfigDict, TypeAdapter
 
 from litellm._logging import verbose_logger
 from litellm.exceptions import AuthenticationError
@@ -19,10 +27,12 @@ from litellm.utils import convert_to_model_response_object
 
 from ..authenticator import Authenticator
 from ..common_utils import (
+    DEFAULT_GITHUB_COPILOT_API_BASE,
     GetAPIKeyError,
-    GITHUB_COPILOT_API_BASE,
     get_copilot_default_headers,
+    pin_session_authorization,
 )
+from ..per_user_auth import require_github_copilot_user_session
 
 if TYPE_CHECKING:
     from litellm.litellm_core_utils.litellm_logging import Logging as _LiteLLMLoggingObj
@@ -30,6 +40,8 @@ if TYPE_CHECKING:
     LiteLLMLoggingObj = _LiteLLMLoggingObj
 else:
     LiteLLMLoggingObj = Any
+
+_RESPONSE_OBJECT: Final = TypeAdapter(dict[str, object], config=ConfigDict(hide_input_in_errors=True))
 
 
 class GithubCopilotEmbeddingConfig(BaseEmbeddingConfig):
@@ -50,12 +62,21 @@ class GithubCopilotEmbeddingConfig(BaseEmbeddingConfig):
         messages: list,
         optional_params: dict,
         litellm_params: dict,
-        api_key: Optional[str] = None,
-        api_base: Optional[str] = None,
+        api_key: str | None = None,
+        api_base: str | None = None,
     ) -> dict:
         """
         Validate environment and set up headers for GitHub Copilot API.
         """
+        user_session: Final = require_github_copilot_user_session(
+            cast("dict[str, object]", litellm_params)  # cast-ok: litellm_params arrives as an untyped request dict
+        )
+        if user_session is not None:
+            session_headers: Final = cast(  # cast-ok: both spreads are str-valued header dicts
+                "dict[str, str]", {**get_copilot_default_headers(user_session.token), **headers}
+            )
+            pin_session_authorization(session_headers, user_session.token)
+            return session_headers
         try:
             # Get GitHub Copilot API key via OAuth
             api_key = self.authenticator.get_api_key()
@@ -68,14 +89,12 @@ class GithubCopilotEmbeddingConfig(BaseEmbeddingConfig):
                 )
 
             # Get default headers
-            default_headers = get_copilot_default_headers(api_key)
+            default_headers: Final = get_copilot_default_headers(api_key)
 
             # Merge with existing headers (user's extra_headers take priority)
-            merged_headers = {**default_headers, **headers}
+            merged_headers: Final = {**default_headers, **headers}
 
-            verbose_logger.debug(
-                f"GitHub Copilot Embedding API: Successfully configured headers for model {model}"
-            )
+            verbose_logger.debug("GitHub Copilot Embedding API: Successfully configured headers for model %s", model)
 
             return merged_headers
 
@@ -88,28 +107,32 @@ class GithubCopilotEmbeddingConfig(BaseEmbeddingConfig):
 
     def get_complete_url(
         self,
-        api_base: Optional[str],
-        api_key: Optional[str],
+        api_base: str | None,
+        api_key: str | None,
         model: str,
         optional_params: dict,
         litellm_params: dict,
-        stream: Optional[bool] = None,
+        stream: bool | None = None,
     ) -> str:
         """
         Get the complete URL for GitHub Copilot Embedding API endpoint.
         """
-        # Use provided api_base or fall back to authenticator's base or default
-        api_base = (
-            self.authenticator.get_api_base()
+        user_session: Final = require_github_copilot_user_session(
+            cast("dict[str, object]", litellm_params)  # cast-ok: litellm_params arrives as an untyped request dict
+        )
+        effective_api_base = (
+            (user_session.api_base if user_session is not None else None)
             or api_base
-            or GITHUB_COPILOT_API_BASE
+            or self.authenticator.get_api_base()
+            or os.getenv("GITHUB_COPILOT_API_BASE")
+            or DEFAULT_GITHUB_COPILOT_API_BASE
         )
 
         # Remove trailing slashes
-        api_base = api_base.rstrip("/")
+        effective_api_base = effective_api_base.rstrip("/")
 
         # Return the embeddings endpoint
-        return f"{api_base}/embeddings"
+        return f"{effective_api_base}/embeddings"
 
     def transform_embedding_request(
         self,
@@ -121,7 +144,7 @@ class GithubCopilotEmbeddingConfig(BaseEmbeddingConfig):
         """
         Transform embedding request to GitHub Copilot format.
         """
-        
+
         # Ensure input is a list
         if isinstance(input, str):
             input = [input]
@@ -142,7 +165,7 @@ class GithubCopilotEmbeddingConfig(BaseEmbeddingConfig):
         raw_response: httpx.Response,
         model_response: EmbeddingResponse,
         logging_obj: LiteLLMLoggingObj,
-        api_key: Optional[str],
+        api_key: str | None,
         request_data: dict,
         optional_params: dict,
         litellm_params: dict,
@@ -151,10 +174,10 @@ class GithubCopilotEmbeddingConfig(BaseEmbeddingConfig):
         Transform embedding response from GitHub Copilot format.
         """
         logging_obj.post_call(original_response=raw_response.text)
-        
+
         # GitHub Copilot returns standard OpenAI-compatible embedding response
-        response_json = raw_response.json()
-        
+        response_json: Final = _RESPONSE_OBJECT.validate_python(raw_response.json())
+
         return convert_to_model_response_object(
             response_object=response_json,
             model_response_object=model_response,
@@ -181,12 +204,7 @@ class GithubCopilotEmbeddingConfig(BaseEmbeddingConfig):
                 optional_params[param] = value
         return optional_params
 
-    def get_error_class(
-        self, error_message: str, status_code: int, headers: Any
-    ) -> Any:
+    def get_error_class(self, error_message: str, status_code: int, headers: Any) -> Any:
         from litellm.llms.openai.openai import OpenAIConfig
 
-        return OpenAIConfig().get_error_class(
-            error_message=error_message, status_code=status_code, headers=headers
-        )
-
+        return OpenAIConfig().get_error_class(error_message=error_message, status_code=status_code, headers=headers)

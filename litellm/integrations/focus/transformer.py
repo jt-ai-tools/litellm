@@ -2,11 +2,42 @@
 
 from __future__ import annotations
 
+import json
 from datetime import timedelta
+from typing import Final
 
 import polars as pl
 
 from .schema import FOCUS_NORMALIZED_SCHEMA
+
+_TAG_KEYS: Final = (
+    "team_id",
+    "team_alias",
+    "organization_id",
+    "organization_alias",
+    "user_id",
+    "user_email",
+    "api_key_alias",
+    "model",
+    "model_group",
+    "custom_llm_provider",
+)
+
+
+def _build_tags_expr(available_keys: list[str]) -> pl.Expr:
+    """Build a Polars expression that produces a JSON Tags string per row.
+
+    Uses ``pl.struct`` + ``map_elements`` to avoid materialising the entire
+    DataFrame to a list of Python dicts.  The JSON serialisation callback
+    still runs in Python (GIL-bound), but struct-packing and loop dispatch
+    are handled by Polars' Rust engine.
+    """
+
+    def _struct_to_json(row: dict) -> str:
+        tags: Final = {k: str(v) for k, v in row.items() if v is not None}
+        return json.dumps(tags) if tags else "{}"
+
+    return pl.struct(available_keys).map_elements(_struct_to_json, return_dtype=pl.String).alias("Tags")
 
 
 class FocusTransformer:
@@ -18,6 +49,13 @@ class FocusTransformer:
         """Return a normalized frame expected by downstream serializers."""
         if frame.is_empty():
             return pl.DataFrame(schema=self.schema)
+
+        # Build Tags JSON from metadata columns using vectorized Polars expression
+        available_keys: Final = [k for k in _TAG_KEYS if k in frame.columns]
+        if available_keys:
+            frame = frame.with_columns(_build_tags_expr(available_keys))
+        else:
+            frame = frame.with_columns(pl.lit("{}").alias("Tags"))
 
         # derive period start/end from usage date
         frame = frame.with_columns(
@@ -34,13 +72,13 @@ class FocusTransformer:
         def fmt(col):
             return col.dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        DEC = pl.Decimal(18, 6)
+        DEC: Final = pl.Decimal(18, 6)
 
         def dec(col):
             return col.cast(DEC)
 
-        none_str = pl.lit(None, dtype=pl.Utf8)
-        none_dec = pl.lit(None, dtype=pl.Decimal(18, 6))
+        none_str: Final = pl.lit(None, dtype=pl.Utf8)
+        none_dec: Final = pl.lit(None, dtype=pl.Decimal(18, 6))
 
         return frame.select(
             dec(pl.col("spend").fill_null(0.0)).alias("BilledCost"),
@@ -56,7 +94,7 @@ class FocusTransformer:
             pl.lit("Usage-Based").alias("ChargeFrequency"),
             fmt(pl.col("ChargePeriodEnd")).alias("ChargePeriodEnd"),
             fmt(pl.col("ChargePeriodStart")).alias("ChargePeriodStart"),
-            dec(pl.lit(1.0)).alias("ConsumedQuantity"),
+            dec(pl.col("api_requests").cast(pl.Int64).cast(pl.Float64).fill_null(0.0)).alias("ConsumedQuantity"),
             pl.lit("Requests").alias("ConsumedUnit"),
             dec(pl.col("spend").fill_null(0.0)).alias("ContractedCost"),
             none_str.alias("ContractedUnitPrice"),
@@ -68,7 +106,7 @@ class FocusTransformer:
             none_str.alias("AvailabilityZone"),
             pl.lit("USD").alias("PricingCurrency"),
             none_str.alias("PricingCategory"),
-            dec(pl.lit(1.0)).alias("PricingQuantity"),
+            dec(pl.col("api_requests").cast(pl.Int64).cast(pl.Float64).fill_null(0.0)).alias("PricingQuantity"),
             none_dec.alias("PricingCurrencyContractedUnitPrice"),
             dec(pl.col("spend").fill_null(0.0)).alias("PricingCurrencyEffectiveCost"),
             none_dec.alias("PricingCurrencyListUnitPrice"),
@@ -86,5 +124,5 @@ class FocusTransformer:
             pl.col("team_id").cast(pl.String).alias("SubAccountId"),
             pl.col("team_alias").cast(pl.String).alias("SubAccountName"),
             none_str.alias("SubAccountType"),
-            none_str.alias("Tags"),
+            pl.col("Tags").cast(pl.String).alias("Tags"),
         )

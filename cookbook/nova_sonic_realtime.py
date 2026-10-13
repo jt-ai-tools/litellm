@@ -10,6 +10,7 @@ Prerequisites:
 - websockets installed: pip install websockets
 
 Usage:
+    export LITELLM_MASTER_KEY="sk-$(openssl rand -hex 32)"
     python nova_sonic_realtime.py
 """
 
@@ -33,7 +34,7 @@ CHUNK_SIZE = 1024
 
 # LiteLLM proxy configuration
 LITELLM_PROXY_URL = "ws://localhost:4000/v1/realtime?model=bedrock-sonic"
-LITELLM_API_KEY = "sk-12345"  # Your LiteLLM API key
+LITELLM_API_KEY = os.environ["LITELLM_MASTER_KEY"]
 
 
 class RealtimeClient:
@@ -52,11 +53,11 @@ class RealtimeClient:
     async def connect(self):
         """Connect to LiteLLM proxy realtime endpoint."""
         print(f"Connecting to {self.url}...")
-        
+
         headers = {}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
-        
+
         self.ws = await websockets.connect(
             self.url,
             additional_headers=headers,
@@ -175,7 +176,9 @@ class RealtimeClient:
 
         try:
             while self.is_active:
-                audio_data = self.input_stream.read(CHUNK_SIZE, exception_on_overflow=False)
+                audio_data = self.input_stream.read(
+                    CHUNK_SIZE, exception_on_overflow=False
+                )
                 await self.send_audio_chunk(audio_data)
                 await asyncio.sleep(0.01)  # Small delay to prevent overwhelming
         except Exception as e:
@@ -270,6 +273,7 @@ async def main():
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
     finally:
         await client.close()
@@ -281,7 +285,7 @@ if __name__ == "__main__":
     print("2. Bedrock is configured in proxy_server_config.yaml")
     print("3. AWS credentials are set")
     print()
-    
+
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

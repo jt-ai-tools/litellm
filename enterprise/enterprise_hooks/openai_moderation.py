@@ -17,17 +17,17 @@ from fastapi import HTTPException
 
 import litellm
 from litellm._logging import verbose_proxy_logger
+from litellm.constants import DEFAULT_OPENAI_MODERATIONS_MODEL
 from litellm.integrations.custom_logger import CustomLogger
 from litellm.proxy._types import UserAPIKeyAuth
+from litellm.proxy.guardrails._content_utils import iter_message_text
 from litellm.types.utils import CallTypesLiteral
 
 
-class _ENTERPRISE_OpenAI_Moderation(CustomLogger):
-    def __init__(self):
-        self.model_name = (
-            litellm.openai_moderations_model_name or "text-moderation-latest"
-        )  # pass the model_name you initialized on litellm.Router()
-        pass
+class ENTERPRISE_OpenAI_Moderation(CustomLogger):
+    @property
+    def model_name(self) -> str:
+        return litellm.openai_moderations_model_name or DEFAULT_OPENAI_MODERATIONS_MODEL
 
     #### CALL HOOKS - proxy only ####
 
@@ -37,11 +37,8 @@ class _ENTERPRISE_OpenAI_Moderation(CustomLogger):
         user_api_key_dict: UserAPIKeyAuth,
         call_type: CallTypesLiteral,
     ):
-        text = ""
-        if "messages" in data and isinstance(data["messages"], list):
-            for m in data["messages"]:  # assume messages is a list
-                if "content" in m and isinstance(m["content"], str):
-                    text += m["content"]
+        # Covers multimodal list content + Responses-API input.
+        text = "".join(iter_message_text(data))
 
         from litellm.proxy.proxy_server import llm_router
 
@@ -58,3 +55,4 @@ class _ENTERPRISE_OpenAI_Moderation(CustomLogger):
                 status_code=403, detail={"error": "Violated content safety policy"}
             )
         pass
+_ENTERPRISE_OpenAI_Moderation = ENTERPRISE_OpenAI_Moderation

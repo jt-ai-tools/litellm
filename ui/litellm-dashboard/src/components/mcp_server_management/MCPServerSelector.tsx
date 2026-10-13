@@ -1,20 +1,27 @@
 import { useMCPAccessGroups } from "@/app/(dashboard)/hooks/mcpServers/useMCPAccessGroups";
 import { useMCPServers } from "@/app/(dashboard)/hooks/mcpServers/useMCPServers";
-import { Select } from "antd";
+import { useMCPToolsets } from "@/app/(dashboard)/hooks/mcpServers/useMCPToolsets";
+import { MultiSelect, type MultiSelectOption } from "@/components/shared/MultiSelect";
 import React from "react";
+import { ALL_PROXY_MCP_SERVERS_SENTINEL, NO_MCP_SERVERS_SENTINEL } from "@/components/mcp_tools/constants";
 
 interface MCPServerSelectorProps {
-  onChange: (selected: { servers: string[]; accessGroups: string[] }) => void;
+  onChange: (selected: { servers: string[]; accessGroups: string[]; toolsets: string[] }) => void;
   value?: {
     servers: string[];
     accessGroups: string[];
+    toolsets?: string[];
   };
   className?: string;
   accessToken: string;
   placeholder?: string;
   disabled?: boolean;
   teamId?: string | null;
+  allowNoMcpServers?: boolean;
+  allowAllProxyMcpServers?: boolean;
 }
+
+const TOOLSET_PREFIX = "toolset:";
 
 const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
   onChange,
@@ -24,84 +31,91 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
   placeholder = "Select MCP servers",
   disabled = false,
   teamId,
+  allowNoMcpServers = false,
+  allowAllProxyMcpServers = false,
 }) => {
   const { data: mcpServers = [], isLoading: serversLoading } = useMCPServers(teamId);
   const { data: accessGroups = [], isLoading: groupsLoading } = useMCPAccessGroups();
+  const { data: toolsets = [], isLoading: toolsetsLoading } = useMCPToolsets();
 
-  const loading = serversLoading || groupsLoading;
+  const loading = serversLoading || groupsLoading || toolsetsLoading;
 
-  // Combine options, access groups first
+  const accessGroupSet = new Set(accessGroups);
+
+  // Combine options: access groups + servers + toolsets
   const options = [
     ...accessGroups.map((group) => ({
       label: group,
       value: group,
-      isAccessGroup: true,
-      searchText: `${group} Access Group`,
+      description: "Access Group",
     })),
     ...mcpServers.map((server) => ({
       label: `${server.server_name || server.server_id} (${server.server_id})`,
       value: server.server_id,
-      isAccessGroup: false,
-      searchText: `${server.server_name || server.server_id} ${server.server_id} MCP Server`,
+      description: "MCP Server",
+    })),
+    ...toolsets.map((toolset) => ({
+      label: toolset.toolset_name,
+      value: `${TOOLSET_PREFIX}${toolset.toolset_id}`,
+      description: "Toolset",
     })),
   ];
 
-  // Flatten value for Select
-  const selectedValues = [...(value?.servers || []), ...(value?.accessGroups || [])];
+  // Flatten value for Select — prefix toolset IDs
+  const selectedValues = [
+    ...(value?.servers || []),
+    ...(value?.accessGroups || []),
+    ...(value?.toolsets || []).map((id) => `${TOOLSET_PREFIX}${id}`),
+  ];
+
+  const hasNoMcpServersSelected = allowNoMcpServers && selectedValues.includes(NO_MCP_SERVERS_SENTINEL);
+  const hasAllProxyMcpServersSelected = selectedValues.includes(ALL_PROXY_MCP_SERVERS_SENTINEL);
 
   // Handle selection
   const handleChange = (selected: string[]) => {
-    const servers = selected.filter((v) => !accessGroups.includes(v));
-    const accessGroupsSelected = selected.filter((v) => accessGroups.includes(v));
-    onChange({ servers, accessGroups: accessGroupsSelected });
+    if (allowAllProxyMcpServers && selected.includes(ALL_PROXY_MCP_SERVERS_SENTINEL)) {
+      onChange({ servers: [ALL_PROXY_MCP_SERVERS_SENTINEL], accessGroups: [], toolsets: [] });
+      return;
+    }
+    // "No MCP Servers" is exclusive: picking it clears everything else.
+    if (allowNoMcpServers && selected.includes(NO_MCP_SERVERS_SENTINEL)) {
+      onChange({ servers: [NO_MCP_SERVERS_SENTINEL], accessGroups: [], toolsets: [] });
+      return;
+    }
+    const toolsetsSelected = selected
+      .filter((v) => v.startsWith(TOOLSET_PREFIX))
+      .map((v) => v.slice(TOOLSET_PREFIX.length));
+    const rest = selected.filter((v) => !v.startsWith(TOOLSET_PREFIX));
+    const servers = rest.filter((v) => !accessGroupSet.has(v));
+    const accessGroupsSelected = rest.filter((v) => accessGroupSet.has(v));
+    onChange({ servers, accessGroups: accessGroupsSelected, toolsets: toolsetsSelected });
   };
+
+  const selectOptions: MultiSelectOption[] = [
+    ...(allowAllProxyMcpServers || hasAllProxyMcpServersSelected
+      ? [{ label: "All Proxy MCP Servers", value: ALL_PROXY_MCP_SERVERS_SENTINEL }]
+      : []),
+    ...(allowNoMcpServers
+      ? [{ label: "No MCP Servers", value: NO_MCP_SERVERS_SENTINEL, description: "Block all" }]
+      : []),
+    ...options.map((opt) => ({
+      ...opt,
+      disabled: hasNoMcpServersSelected || hasAllProxyMcpServersSelected,
+    })),
+  ];
 
   return (
     <div>
-      <Select
-        mode="multiple"
-        placeholder={placeholder}
-        onChange={handleChange}
+      <MultiSelect
+        options={selectOptions}
         value={selectedValues}
+        onValueChange={handleChange}
+        placeholder={placeholder}
+        emptyText="No MCP servers found"
         loading={loading}
-        className={className}
-        allowClear
-        showSearch
-        style={{ width: "100%" }}
         disabled={disabled}
-        filterOption={(input, option) => {
-          const searchText = options.find((opt) => opt.value === option?.value)?.searchText || "";
-          return searchText.toLowerCase().includes(input.toLowerCase());
-        }}
-      >
-        {options.map((opt) => (
-          <Select.Option key={opt.value} value={opt.value} label={opt.label}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span
-                style={{
-                  display: "inline-block",
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: opt.isAccessGroup ? "#52c41a" : "#1890ff",
-                  flexShrink: 0,
-                }}
-              />
-              <span style={{ flex: 1 }}>{opt.label}</span>
-              <span
-                style={{
-                  color: opt.isAccessGroup ? "#52c41a" : "#1890ff",
-                  fontSize: "12px",
-                  fontWeight: 500,
-                  opacity: 0.8,
-                }}
-              >
-                {opt.isAccessGroup ? "Access Group" : "MCP Server"}
-              </span>
-            </div>
-          </Select.Option>
-        ))}
-      </Select>
+        className={`w-full ${className ?? ""}`}
+      />
     </div>
   );
 };

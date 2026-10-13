@@ -3,15 +3,7 @@ import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CreatedKeyDisplay from "./CreatedKeyDisplay";
 
-vi.mock("antd", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("antd")>();
-  return {
-    ...actual,
-    message: { success: vi.fn() },
-  };
-});
-
-import { message } from "antd";
+import { toast } from "@/lib/toast";
 
 describe("CreatedKeyDisplay", () => {
   beforeEach(() => {
@@ -25,6 +17,15 @@ describe("CreatedKeyDisplay", () => {
   it("should render", () => {
     render(<CreatedKeyDisplay apiKey="sk-test-123" />);
     expect(screen.getByText("sk-test-123")).toBeInTheDocument();
+  });
+
+  it("should theme the key box with tokens instead of a hardcoded light background", () => {
+    render(<CreatedKeyDisplay apiKey="sk-test-123" />);
+
+    const keyBox = screen.getByText("sk-test-123").parentElement as HTMLElement;
+
+    expect(keyBox).not.toHaveAttribute("style");
+    expect(keyBox).toHaveClass("bg-muted");
   });
 
   it("should display the security warning", () => {
@@ -52,7 +53,7 @@ describe("CreatedKeyDisplay", () => {
 
     await user.click(screen.getByRole("button", { name: /copy virtual key/i }));
 
-    expect(message.success).toHaveBeenCalledWith("Key copied to clipboard");
+    expect(toast.success).toHaveBeenCalledWith("Key copied to clipboard");
   });
 
   it("should revert button text back after 2 seconds", async () => {

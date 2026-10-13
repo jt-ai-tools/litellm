@@ -3,10 +3,10 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel
+from litellm.types.llms.base import LiteLLMBaseModel
 
 
-class WeaveOtelConfig(BaseModel):
+class WeaveOtelConfig(LiteLLMBaseModel):
     """Configuration for Weave OpenTelemetry integration."""
 
     otlp_auth_headers: str | None = None
@@ -24,8 +24,7 @@ class WeaveSpanAttributes(str, Enum):
     """
 
     DISPLAY_NAME = "wandb.display_name"
-    
+
     # Thread organization, similar to OpenInference session_id.
     THREAD_ID = "wandb.thread_id"
     IS_TURN = "wandb.is_turn"
-    

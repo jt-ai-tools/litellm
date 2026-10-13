@@ -1,8 +1,6 @@
 import ast
 import os
-import sys
 
-sys.path.insert(0, os.path.abspath("../.."))
 
 import litellm
 
@@ -14,11 +12,15 @@ SEARCH_PROVIDERS = [
     "exa_ai",
     "brave",
     "firecrawl",
+    "fastcrw",
     "searxng",
     "linkup",
     "duckduckgo",
     "searchapi",
     "serper",
+    "apiserpent",
+    "tinyfish",
+    "nimble",
 ]
 
 ALLOWED_FILES_IN_LLMS_FOLDER = [
@@ -28,7 +30,7 @@ ALLOWED_FILES_IN_LLMS_FOLDER = [
     "custom_httpx",
     "custom_llm",
     "deprecated_providers",
-    "pass_through"
+    "pass_through",
 ] + SEARCH_PROVIDERS
 
 

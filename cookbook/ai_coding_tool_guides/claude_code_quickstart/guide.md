@@ -47,7 +47,7 @@ Set your environment variables:
 
 ```bash
 export ANTHROPIC_API_KEY="your-anthropic-api-key"
-export LITELLM_MASTER_KEY="sk-1234567890"  # Generate a secure key
+export LITELLM_MASTER_KEY="sk-$(openssl rand -hex 32)"
 ```
 
 ## Step 2: Start Proxy
@@ -230,7 +230,7 @@ model_list:
   # AWS Bedrock
   - model_name: claude-bedrock
     litellm_params:
-      model: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+      model: bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0
       aws_access_key_id: os.environ/AWS_ACCESS_KEY_ID
       aws_secret_access_key: os.environ/AWS_SECRET_ACCESS_KEY
       aws_region_name: us-east-1
@@ -292,4 +292,3 @@ model_list:
 - [LiteLLM Documentation](https://docs.litellm.ai/)
 - [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code/overview)
 - [Anthropic's LiteLLM Configuration Guide](https://docs.anthropic.com/en/docs/claude-code/llm-gateway#litellm-configuration)
-

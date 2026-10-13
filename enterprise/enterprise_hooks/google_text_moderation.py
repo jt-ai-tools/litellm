@@ -12,10 +12,11 @@ import litellm
 from litellm._logging import verbose_proxy_logger
 from litellm.integrations.custom_logger import CustomLogger
 from litellm.proxy._types import UserAPIKeyAuth
+from litellm.proxy.guardrails._content_utils import iter_message_text
 from litellm.types.utils import CallTypesLiteral
 
 
-class _ENTERPRISE_GoogleTextModeration(CustomLogger):
+class ENTERPRISE_GoogleTextModeration(CustomLogger):
     user_api_key_cache = None
     confidence_categories = [
         "toxic",
@@ -94,11 +95,9 @@ class _ENTERPRISE_GoogleTextModeration(CustomLogger):
         - Calls Google's Text Moderation API
         - Rejects request if it fails safety check
         """
-        if "messages" in data and isinstance(data["messages"], list):
-            text = ""
-            for m in data["messages"]:  # assume messages is a list
-                if "content" in m and isinstance(m["content"], str):
-                    text += m["content"]
+        # Covers multimodal list content + Responses-API input.
+        text = "".join(iter_message_text(data))
+        if text:
             document = self.language_document(content=text, type_=self.document_type)
 
             request = self.moderate_text_request(
@@ -126,9 +125,10 @@ class _ENTERPRISE_GoogleTextModeration(CustomLogger):
                     )
             # Handle the response
             return data
+_ENTERPRISE_GoogleTextModeration = ENTERPRISE_GoogleTextModeration
 
 
-# google_text_moderation_obj = _ENTERPRISE_GoogleTextModeration()
+# google_text_moderation_obj = ENTERPRISE_GoogleTextModeration()
 # asyncio.run(
 #     google_text_moderation_obj.async_moderation_hook(
 #         data={"messages": [{"role": "user", "content": "Hey, how's it going?"}]}

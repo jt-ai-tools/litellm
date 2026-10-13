@@ -5,1178 +5,1046 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Final, Literal
 
-from pydantic import AwareDatetime, Base64Str, BaseModel, Field, RootModel
+from pydantic import AwareDatetime, Base64Str, Field, RootModel
+
+from litellm.types.llms.base import LiteLLMBaseModel
 
 
-class Annotation(BaseModel):
-    start_index: Optional[int] = Field(
+class Annotation(LiteLLMBaseModel):
+    start_index: int | None = Field(
         None,
-        description='Start of segment of the response that is attributed to this source.\n\nIndex indicates the start of the segment, measured in bytes.',
+        description="Start of segment of the response that is attributed to this source.\n\nIndex indicates the start of the segment, measured in bytes.",
     )
-    end_index: Optional[int] = Field(
-        None, description='End of the attributed segment, exclusive.'
-    )
-    source: Optional[str] = Field(
+    end_index: int | None = Field(None, description="End of the attributed segment, exclusive.")
+    source: str | None = Field(
         None,
-        description='Source attributed for a portion of the text. Could be a URL, title, or\nother identifier.',
+        description="Source attributed for a portion of the text. Could be a URL, title, or\nother identifier.",
     )
 
 
-class DocumentContent(BaseModel):
-    data: Optional[Base64Str] = None
-    uri: Optional[str] = None
-    mime_type: Optional[str] = None
-    type: Literal['document'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
+class DocumentContent(LiteLLMBaseModel):
+    data: Base64Str | None = None
+    uri: str | None = None
+    mime_type: str | None = None
+    type: Literal["document"] = Field(..., description="Used as the OpenAPI type discriminator for the content oneof.")
 
 
-class FunctionCallContent(BaseModel):
-    name: str = Field(..., description='The name of the tool to call.')
-    arguments: Dict[str, Any] = Field(
-        ..., description='The arguments to pass to the function.'
+class FunctionCallContent(LiteLLMBaseModel):
+    name: str = Field(..., description="The name of the tool to call.")
+    arguments: dict[str, Any] = Field(..., description="The arguments to pass to the function.")
+    type: Literal["function_call"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    type: Literal['function_call'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    id: str = Field(..., description='A unique ID for this specific tool call.')
+    id: str = Field(..., description="A unique ID for this specific tool call.")
 
 
 class Language(Enum):
-    python = 'python'
+    python = "python"
 
 
-class CodeExecutionCallArguments(BaseModel):
-    language: Optional[Language] = Field(
-        None, description='Programming language of the `code`.'
+class CodeExecutionCallArguments(LiteLLMBaseModel):
+    language: Language | None = Field(None, description="Programming language of the `code`.")
+    code: str | None = Field(None, description="The code to be executed.")
+
+
+class UrlContextCallArguments(LiteLLMBaseModel):
+    urls: list[str] | None = Field(None, description="The URLs to fetch.")
+
+
+class McpServerToolCallContent(LiteLLMBaseModel):
+    name: str = Field(..., description="The name of the tool which was called.")
+    server_name: str = Field(..., description="The name of the used MCP server.")
+    arguments: dict[str, Any] = Field(..., description="The JSON object of arguments for the function.")
+    type: Literal["mcp_server_tool_call"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    code: Optional[str] = Field(None, description='The code to be executed.')
+    id: str = Field(..., description="A unique ID for this specific tool call.")
 
 
-class UrlContextCallArguments(BaseModel):
-    urls: Optional[List[str]] = Field(None, description='The URLs to fetch.')
+class GoogleSearchCallArguments(LiteLLMBaseModel):
+    queries: list[str] | None = Field(None, description="Web search queries for the following-up web search.")
 
 
-class McpServerToolCallContent(BaseModel):
-    name: str = Field(..., description='The name of the tool which was called.')
-    server_name: str = Field(..., description='The name of the used MCP server.')
-    arguments: Dict[str, Any] = Field(
-        ..., description='The JSON object of arguments for the function.'
+class CodeExecutionResultContent(LiteLLMBaseModel):
+    result: str | None = Field(None, description="The output of the code execution.")
+    is_error: bool | None = Field(None, description="Whether the code execution resulted in an error.")
+    signature: str | None = Field(None, description="A signature hash for backend validation.")
+    type: Literal["code_execution_result"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    type: Literal['mcp_server_tool_call'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    id: str = Field(..., description='A unique ID for this specific tool call.')
-
-
-class GoogleSearchCallArguments(BaseModel):
-    queries: Optional[List[str]] = Field(
-        None, description='Web search queries for the following-up web search.'
-    )
-
-
-class CodeExecutionResultContent(BaseModel):
-    result: Optional[str] = Field(None, description='The output of the code execution.')
-    is_error: Optional[bool] = Field(
-        None, description='Whether the code execution resulted in an error.'
-    )
-    signature: Optional[str] = Field(
-        None, description='A signature hash for backend validation.'
-    )
-    type: Literal['code_execution_result'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    call_id: Optional[str] = Field(
-        None, description='ID to match the ID from the code execution call block.'
-    )
+    call_id: str | None = Field(None, description="ID to match the ID from the code execution call block.")
 
 
 class Status(Enum):
-    success = 'success'
-    error = 'error'
-    paywall = 'paywall'
-    unsafe = 'unsafe'
+    success = "success"
+    error = "error"
+    paywall = "paywall"
+    unsafe = "unsafe"
 
 
-class UrlContextResult(BaseModel):
-    url: Optional[str] = Field(None, description='The URL that was fetched.')
-    status: Optional[Status] = Field(
-        None, description='The status of the URL retrieval.'
-    )
+class UrlContextResult(LiteLLMBaseModel):
+    url: str | None = Field(None, description="The URL that was fetched.")
+    status: Status | None = Field(None, description="The status of the URL retrieval.")
 
 
-class GoogleSearchResult(BaseModel):
-    url: Optional[str] = Field(None, description='URI reference of the search result.')
-    title: Optional[str] = Field(None, description='Title of the search result.')
-    rendered_content: Optional[str] = Field(
+class GoogleSearchResult(LiteLLMBaseModel):
+    url: str | None = Field(None, description="URI reference of the search result.")
+    title: str | None = Field(None, description="Title of the search result.")
+    rendered_content: str | None = Field(
         None,
-        description='Web content snippet that can be embedded in a web page or an app webview.',
+        description="Web content snippet that can be embedded in a web page or an app webview.",
     )
 
 
-class FileSearchResult(BaseModel):
-    title: Optional[str] = Field(None, description='The title of the search result.')
-    text: Optional[str] = Field(None, description='The text of the search result.')
-    file_search_store: Optional[str] = Field(
-        None, description='The name of the file search store.'
-    )
+class FileSearchResult(LiteLLMBaseModel):
+    title: str | None = Field(None, description="The title of the search result.")
+    text: str | None = Field(None, description="The text of the search result.")
+    file_search_store: str | None = Field(None, description="The name of the file search store.")
 
 
-class SpeechConfig(BaseModel):
-    voice: Optional[str] = Field(None, description='The voice of the speaker.')
-    language: Optional[str] = Field(None, description='The language of the speech.')
-    speaker: Optional[str] = Field(
+class SpeechConfig(LiteLLMBaseModel):
+    voice: str | None = Field(None, description="The voice of the speaker.")
+    language: str | None = Field(None, description="The language of the speech.")
+    speaker: str | None = Field(
         None,
         description="The speaker's name, it should match the speaker name given in the prompt.",
     )
 
 
-class DynamicAgentConfig(BaseModel):
-    type: Literal['dynamic'] = Field(
-        'dynamic',
-        description='Used as the OpenAPI type discriminator for the content oneof.',
+class DynamicAgentConfig(LiteLLMBaseModel):
+    type: Literal["dynamic"] = Field(
+        "dynamic",
+        description="Used as the OpenAPI type discriminator for the content oneof.",
     )
 
 
-class Function(BaseModel):
-    name: Optional[str] = Field(None, description='The name of the function.')
-    description: Optional[str] = Field(
-        None, description='A description of the function.'
-    )
-    parameters: Optional[Any] = Field(
-        None, description="The JSON Schema for the function's parameters."
-    )
-    type: Literal['function']
+class Function(LiteLLMBaseModel):
+    name: str | None = Field(None, description="The name of the function.")
+    description: str | None = Field(None, description="A description of the function.")
+    parameters: Any | None = Field(None, description="The JSON Schema for the function's parameters.")
+    type: Literal["function"]
 
 
-class CodeExecution(BaseModel):
-    type: Literal['code_execution']
+class CodeExecution(LiteLLMBaseModel):
+    type: Literal["code_execution"]
 
 
-class UrlContext(BaseModel):
-    type: Literal['url_context']
+class UrlContext(LiteLLMBaseModel):
+    type: Literal["url_context"]
 
 
 class Environment(Enum):
-    browser = 'browser'
+    browser = "browser"
 
 
-class ComputerUse(BaseModel):
-    type: Literal['computer_use']
-    environment: Optional[Environment] = Field(
-        None, description='The environment being operated.'
-    )
-    excludedPredefinedFunctions: Optional[List[str]] = Field(
+class ComputerUse(LiteLLMBaseModel):
+    type: Literal["computer_use"]
+    environment: Environment | None = Field(None, description="The environment being operated.")
+    excludedPredefinedFunctions: list[str] | None = Field(
         None,
-        description='The list of predefined functions that are excluded from the model call.',
+        description="The list of predefined functions that are excluded from the model call.",
     )
 
 
-class GoogleSearch(BaseModel):
-    type: Literal['google_search']
+class GoogleSearch(LiteLLMBaseModel):
+    type: Literal["google_search"]
 
 
-class FileSearch(BaseModel):
-    file_search_store_names: Optional[List[str]] = Field(
-        None, description='The file search store names to search.'
-    )
-    top_k: Optional[int] = Field(
-        None, description='The number of semantic retrieval chunks to retrieve.'
-    )
-    metadata_filter: Optional[str] = Field(
+class FileSearch(LiteLLMBaseModel):
+    file_search_store_names: list[str] | None = Field(None, description="The file search store names to search.")
+    top_k: int | None = Field(None, description="The number of semantic retrieval chunks to retrieve.")
+    metadata_filter: str | None = Field(
         None,
-        description='Metadata filter to apply to the semantic retrieval documents and chunks.',
+        description="Metadata filter to apply to the semantic retrieval documents and chunks.",
     )
-    type: Literal['file_search']
+    type: Literal["file_search"]
 
 
 class EventType(Enum):
-    interaction_start = 'interaction.start'
-    interaction_complete = 'interaction.complete'
+    interaction_start = "interaction.start"
+    interaction_complete = "interaction.complete"
 
 
 class Status1(Enum):
-    in_progress = 'in_progress'
-    requires_action = 'requires_action'
-    completed = 'completed'
-    failed = 'failed'
-    cancelled = 'cancelled'
+    in_progress = "in_progress"
+    requires_action = "requires_action"
+    completed = "completed"
+    failed = "failed"
+    cancelled = "cancelled"
+    incomplete = "incomplete"
+    budget_exceeded = "budget_exceeded"
+    queued = "queued"
 
 
-class InteractionStatusUpdate(BaseModel):
-    interaction_id: Optional[str] = None
-    status: Optional[Status1] = None
-    event_type: Literal['interaction.status_update'] = 'interaction.status_update'
-    event_id: Optional[str] = Field(
+class InteractionStatusUpdate(LiteLLMBaseModel):
+    interaction_id: str | None = None
+    status: Status1 | None = None
+    event_type: Literal["interaction.status_update"] = "interaction.status_update"
+    event_id: str | None = Field(
         None,
-        description='The event_id token to be used to resume the interaction stream, from\nthis event.',
+        description="The event_id token to be used to resume the interaction stream, from\nthis event.",
     )
 
 
-class TextDelta(BaseModel):
-    text: Optional[str] = None
-    type: Literal['text'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    annotations: Optional[List[Annotation]] = Field(
-        None, description='Citation information for model-generated content.'
-    )
+class TextDelta(LiteLLMBaseModel):
+    text: str | None = None
+    type: Literal["text"] = Field(..., description="Used as the OpenAPI type discriminator for the content oneof.")
+    annotations: list[Annotation] | None = Field(None, description="Citation information for model-generated content.")
 
 
-class DocumentDelta(BaseModel):
-    data: Optional[Base64Str] = None
-    uri: Optional[str] = None
-    mime_type: Optional[str] = None
-    type: Literal['document'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
+class DocumentDelta(LiteLLMBaseModel):
+    data: Base64Str | None = None
+    uri: str | None = None
+    mime_type: str | None = None
+    type: Literal["document"] = Field(..., description="Used as the OpenAPI type discriminator for the content oneof.")
 
 
-class ThoughtSignatureDelta(BaseModel):
-    signature: Optional[Base64Str] = Field(
+class ThoughtSignatureDelta(LiteLLMBaseModel):
+    signature: Base64Str | None = Field(
         None,
-        description='Signature to match the backend source to be part of the generation.',
+        description="Signature to match the backend source to be part of the generation.",
     )
-    type: Literal['thought_signature'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-
-
-class FunctionCallDelta(BaseModel):
-    name: Optional[str] = None
-    arguments: Optional[Dict[str, Any]] = None
-    type: Literal['function_call'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    id: Optional[str] = Field(
-        None, description='A unique ID for this specific tool call.'
+    type: Literal["thought_signature"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
 
 
-class CodeExecutionCallDelta(BaseModel):
-    arguments: Optional[CodeExecutionCallArguments] = None
-    type: Literal['code_execution_call'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
+class FunctionCallDelta(LiteLLMBaseModel):
+    name: str | None = None
+    arguments: dict[str, Any] | None = None
+    type: Literal["function_call"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    id: Optional[str] = Field(
-        None, description='A unique ID for this specific tool call.'
-    )
+    id: str | None = Field(None, description="A unique ID for this specific tool call.")
 
 
-class UrlContextCallDelta(BaseModel):
-    arguments: Optional[UrlContextCallArguments] = None
-    type: Literal['url_context_call'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
+class CodeExecutionCallDelta(LiteLLMBaseModel):
+    arguments: CodeExecutionCallArguments | None = None
+    type: Literal["code_execution_call"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    id: Optional[str] = Field(
-        None, description='A unique ID for this specific tool call.'
-    )
+    id: str | None = Field(None, description="A unique ID for this specific tool call.")
 
 
-class GoogleSearchCallDelta(BaseModel):
-    arguments: Optional[GoogleSearchCallArguments] = None
-    type: Literal['google_search_call'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
+class UrlContextCallDelta(LiteLLMBaseModel):
+    arguments: UrlContextCallArguments | None = None
+    type: Literal["url_context_call"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    id: Optional[str] = Field(
-        None, description='A unique ID for this specific tool call.'
-    )
+    id: str | None = Field(None, description="A unique ID for this specific tool call.")
 
 
-class McpServerToolCallDelta(BaseModel):
-    name: Optional[str] = None
-    server_name: Optional[str] = None
-    arguments: Optional[Dict[str, Any]] = None
-    type: Literal['mcp_server_tool_call'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
+class GoogleSearchCallDelta(LiteLLMBaseModel):
+    arguments: GoogleSearchCallArguments | None = None
+    type: Literal["google_search_call"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    id: Optional[str] = Field(
-        None, description='A unique ID for this specific tool call.'
-    )
+    id: str | None = Field(None, description="A unique ID for this specific tool call.")
 
 
-class CodeExecutionResultDelta(BaseModel):
-    result: Optional[str] = None
-    is_error: Optional[bool] = None
-    signature: Optional[str] = None
-    type: Literal['code_execution_result'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
+class McpServerToolCallDelta(LiteLLMBaseModel):
+    name: str | None = None
+    server_name: str | None = None
+    arguments: dict[str, Any] | None = None
+    type: Literal["mcp_server_tool_call"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    call_id: Optional[str] = Field(
-        None, description='ID to match the ID from the function call block.'
-    )
+    id: str | None = Field(None, description="A unique ID for this specific tool call.")
 
 
-class UrlContextResultDelta(BaseModel):
-    signature: Optional[str] = None
-    result: Optional[List[UrlContextResult]] = None
-    is_error: Optional[bool] = None
-    type: Literal['url_context_result'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
+class CodeExecutionResultDelta(LiteLLMBaseModel):
+    result: str | None = None
+    is_error: bool | None = None
+    signature: str | None = None
+    type: Literal["code_execution_result"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    call_id: Optional[str] = Field(
-        None, description='ID to match the ID from the function call block.'
-    )
+    call_id: str | None = Field(None, description="ID to match the ID from the function call block.")
 
 
-class GoogleSearchResultDelta(BaseModel):
-    signature: Optional[str] = None
-    result: Optional[List[GoogleSearchResult]] = None
-    is_error: Optional[bool] = None
-    type: Literal['google_search_result'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
+class UrlContextResultDelta(LiteLLMBaseModel):
+    signature: str | None = None
+    result: list[UrlContextResult] | None = None
+    is_error: bool | None = None
+    type: Literal["url_context_result"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    call_id: Optional[str] = Field(
-        None, description='ID to match the ID from the function call block.'
-    )
+    call_id: str | None = Field(None, description="ID to match the ID from the function call block.")
 
 
-class FileSearchResultDelta(BaseModel):
-    result: Optional[List[FileSearchResult]] = None
-    type: Literal['file_search_result'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
+class GoogleSearchResultDelta(LiteLLMBaseModel):
+    signature: str | None = None
+    result: list[GoogleSearchResult] | None = None
+    is_error: bool | None = None
+    type: Literal["google_search_result"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
+    )
+    call_id: str | None = Field(None, description="ID to match the ID from the function call block.")
+
+
+class FileSearchResultDelta(LiteLLMBaseModel):
+    result: list[FileSearchResult] | None = None
+    type: Literal["file_search_result"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
 
 
-class ContentStop(BaseModel):
-    index: Optional[int] = None
-    event_type: Literal['content.stop'] = 'content.stop'
-    event_id: Optional[str] = Field(
+class ContentStop(LiteLLMBaseModel):
+    index: int | None = None
+    event_type: Literal["content.stop"] = "content.stop"
+    event_id: str | None = Field(
         None,
-        description='The event_id token to be used to resume the interaction stream, from\nthis event.',
+        description="The event_id token to be used to resume the interaction stream, from\nthis event.",
     )
 
 
-class Error(BaseModel):
-    code: Optional[str] = Field(
-        None, description='A URI that identifies the error type.'
-    )
-    message: Optional[str] = Field(None, description='A human-readable error message.')
+class Error(LiteLLMBaseModel):
+    code: str | None = Field(None, description="A URI that identifies the error type.")
+    message: str | None = Field(None, description="A human-readable error message.")
 
 
 class MediaResolution(Enum):
-    low = 'low'
-    medium = 'medium'
-    high = 'high'
+    low = "low"
+    medium = "medium"
+    high = "high"
 
 
 class ToolChoiceType(Enum):
-    auto = 'auto'
-    any = 'any'
-    none = 'none'
-    validated = 'validated'
+    auto = "auto"
+    any = "any"
+    none = "none"
+    validated = "validated"
 
 
 class ThinkingLevel(Enum):
-    low = 'low'
-    high = 'high'
+    low = "low"
+    high = "high"
 
 
 class ThinkingSummaries(Enum):
-    auto = 'auto'
-    none = 'none'
+    auto = "auto"
+    none = "none"
 
 
 class ResponseModality(Enum):
-    text = 'text'
-    image = 'image'
-    audio = 'audio'
+    text = "text"
+    image = "image"
+    audio = "audio"
 
 
 class Status3(Enum):
-    UNSPECIFIED = 'UNSPECIFIED'
-    IN_PROGRESS = 'IN_PROGRESS'
-    REQUIRES_ACTION = 'REQUIRES_ACTION'
-    COMPLETED = 'COMPLETED'
-    FAILED = 'FAILED'
-    CANCELLED = 'CANCELLED'
-    INCOMPLETE = 'INCOMPLETE'
+    IN_PROGRESS = "in_progress"
+    REQUIRES_ACTION = "requires_action"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    INCOMPLETE = "incomplete"
+    BUDGET_EXCEEDED = "budget_exceeded"
+    QUEUED = "queued"
 
 
 class ModelOption(RootModel[str]):
     root: str = Field(
         ...,
-        description='The model that will complete your prompt.\\n\\nSee [models](https://ai.google.dev/gemini-api/docs/models) for additional details.',
-        title='Model',
+        description="The model that will complete your prompt.\\n\\nSee [models](https://ai.google.dev/gemini-api/docs/models) for additional details.",
+        title="Model",
     )
 
 
 class AgentOption(RootModel[str]):
-    root: str = Field(..., description='The agent to interact with.', title='Agent')
+    root: str = Field(..., description="The agent to interact with.", title="Agent")
 
 
 class ImageMimeTypeOption(RootModel[str]):
-    root: str = Field(
-        ..., description='The mime type of the image.', title='ImageMimeType'
-    )
+    root: str = Field(..., description="The mime type of the image.", title="ImageMimeType")
 
 
 class AudioMimeTypeOption(RootModel[str]):
-    root: str = Field(
-        ..., description='The mime type of the audio.', title='AudioMimeType'
-    )
+    root: str = Field(..., description="The mime type of the audio.", title="AudioMimeType")
 
 
 class VideoMimeTypeOption(RootModel[str]):
-    root: str = Field(
-        ..., description='The mime type of the video.', title='VideoMimeType'
-    )
+    root: str = Field(..., description="The mime type of the video.", title="VideoMimeType")
 
 
-class TextContent(BaseModel):
-    text: Optional[str] = Field(None, description='The text content.')
-    type: Literal['text'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    annotations: Optional[List[Annotation]] = Field(
-        None, description='Citation information for model-generated content.'
-    )
+class TextContent(LiteLLMBaseModel):
+    text: str | None = Field(None, description="The text content.")
+    type: Literal["text"] = Field(..., description="Used as the OpenAPI type discriminator for the content oneof.")
+    annotations: list[Annotation] | None = Field(None, description="Citation information for model-generated content.")
 
 
-class ImageContent(BaseModel):
-    data: Optional[Base64Str] = None
-    uri: Optional[str] = None
-    mime_type: Optional[ImageMimeTypeOption] = None
-    type: Literal['image'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    resolution: Optional[MediaResolution] = Field(
-        None, description='The resolution of the media.'
-    )
+class ImageContent(LiteLLMBaseModel):
+    data: Base64Str | None = None
+    uri: str | None = None
+    mime_type: ImageMimeTypeOption | None = None
+    type: Literal["image"] = Field(..., description="Used as the OpenAPI type discriminator for the content oneof.")
+    resolution: MediaResolution | None = Field(None, description="The resolution of the media.")
 
 
-class AudioContent(BaseModel):
-    data: Optional[Base64Str] = None
-    uri: Optional[str] = None
-    mime_type: Optional[AudioMimeTypeOption] = None
-    type: Literal['audio'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
+class AudioContent(LiteLLMBaseModel):
+    data: Base64Str | None = None
+    uri: str | None = None
+    mime_type: AudioMimeTypeOption | None = None
+    type: Literal["audio"] = Field(..., description="Used as the OpenAPI type discriminator for the content oneof.")
 
 
-class VideoContent(BaseModel):
-    data: Optional[Base64Str] = None
-    uri: Optional[str] = None
-    mime_type: Optional[VideoMimeTypeOption] = None
-    type: Literal['video'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    resolution: Optional[MediaResolution] = Field(
-        None, description='The resolution of the media.'
-    )
+class VideoContent(LiteLLMBaseModel):
+    data: Base64Str | None = None
+    uri: str | None = None
+    mime_type: VideoMimeTypeOption | None = None
+    type: Literal["video"] = Field(..., description="Used as the OpenAPI type discriminator for the content oneof.")
+    resolution: MediaResolution | None = Field(None, description="The resolution of the media.")
 
 
-class ThoughtSummary1(RootModel[Union[TextContent, ImageContent]]):
-    root: Union[TextContent, ImageContent] = Field(..., discriminator='type')
+class ThoughtSummary1(RootModel[TextContent | ImageContent]):
+    root: TextContent | ImageContent = Field(..., discriminator="type")
 
 
-class ThoughtSummary(RootModel[List[ThoughtSummary1]]):
-    root: List[ThoughtSummary1] = Field(..., description='A summary of the thought.')
+class ThoughtSummary(RootModel[list[ThoughtSummary1]]):
+    root: list[ThoughtSummary1] = Field(..., description="A summary of the thought.")
 
 
-class CodeExecutionCallContent(BaseModel):
-    arguments: Optional[CodeExecutionCallArguments] = Field(
-        None, description='The arguments to pass to the code execution.'
+class CodeExecutionCallContent(LiteLLMBaseModel):
+    arguments: CodeExecutionCallArguments | None = Field(
+        None, description="The arguments to pass to the code execution."
     )
-    type: Literal['code_execution_call'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
+    type: Literal["code_execution_call"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    id: Optional[str] = Field(
-        None, description='A unique ID for this specific tool call.'
-    )
+    id: str | None = Field(None, description="A unique ID for this specific tool call.")
 
 
-class UrlContextCallContent(BaseModel):
-    arguments: Optional[UrlContextCallArguments] = Field(
-        None, description='The arguments to pass to the URL context.'
+class UrlContextCallContent(LiteLLMBaseModel):
+    arguments: UrlContextCallArguments | None = Field(None, description="The arguments to pass to the URL context.")
+    type: Literal["url_context_call"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    type: Literal['url_context_call'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    id: Optional[str] = Field(
-        None, description='A unique ID for this specific tool call.'
-    )
+    id: str | None = Field(None, description="A unique ID for this specific tool call.")
 
 
-class GoogleSearchCallContent(BaseModel):
-    arguments: Optional[GoogleSearchCallArguments] = Field(
-        None, description='The arguments to pass to Google Search.'
+class GoogleSearchCallContent(LiteLLMBaseModel):
+    arguments: GoogleSearchCallArguments | None = Field(None, description="The arguments to pass to Google Search.")
+    type: Literal["google_search_call"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    type: Literal['google_search_call'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    id: Optional[str] = Field(
-        None, description='A unique ID for this specific tool call.'
-    )
+    id: str | None = Field(None, description="A unique ID for this specific tool call.")
 
 
-class Result(BaseModel):
-    items: Optional[List[Union[str, ImageContent]]] = None
+class Result(LiteLLMBaseModel):
+    items: list[str | ImageContent] | None = None
 
 
-class FunctionResultContent(BaseModel):
-    name: Optional[str] = Field(
-        None, description='The name of the tool that was called.'
+class FunctionResultContent(LiteLLMBaseModel):
+    name: str | None = Field(None, description="The name of the tool that was called.")
+    is_error: bool | None = Field(None, description="Whether the tool call resulted in an error.")
+    type: Literal["function_result"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    is_error: Optional[bool] = Field(
-        None, description='Whether the tool call resulted in an error.'
-    )
-    type: Literal['function_result'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    result: Union[Result, Dict[str, Any], str] = Field(
-        ..., description='The result of the tool call.'
-    )
-    call_id: str = Field(
-        ..., description='ID to match the ID from the function call block.'
-    )
+    result: Result | dict[str, Any] | str = Field(..., description="The result of the tool call.")
+    call_id: str = Field(..., description="ID to match the ID from the function call block.")
 
 
-class UrlContextResultContent(BaseModel):
-    signature: Optional[str] = Field(
-        None, description='The signature of the URL context result.'
+class UrlContextResultContent(LiteLLMBaseModel):
+    signature: str | None = Field(None, description="The signature of the URL context result.")
+    result: list[UrlContextResult] | None = Field(None, description="The results of the URL context.")
+    is_error: bool | None = Field(None, description="Whether the URL context resulted in an error.")
+    type: Literal["url_context_result"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    result: Optional[List[UrlContextResult]] = Field(
-        None, description='The results of the URL context.'
-    )
-    is_error: Optional[bool] = Field(
-        None, description='Whether the URL context resulted in an error.'
-    )
-    type: Literal['url_context_result'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    call_id: Optional[str] = Field(
-        None, description='ID to match the ID from the url context call block.'
-    )
+    call_id: str | None = Field(None, description="ID to match the ID from the url context call block.")
 
 
-class GoogleSearchResultContent(BaseModel):
-    signature: Optional[str] = Field(
-        None, description='The signature of the Google Search result.'
+class GoogleSearchResultContent(LiteLLMBaseModel):
+    signature: str | None = Field(None, description="The signature of the Google Search result.")
+    result: list[GoogleSearchResult] | None = Field(None, description="The results of the Google Search.")
+    is_error: bool | None = Field(None, description="Whether the Google Search resulted in an error.")
+    type: Literal["google_search_result"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    result: Optional[List[GoogleSearchResult]] = Field(
-        None, description='The results of the Google Search.'
-    )
-    is_error: Optional[bool] = Field(
-        None, description='Whether the Google Search resulted in an error.'
-    )
-    type: Literal['google_search_result'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    call_id: Optional[str] = Field(
-        None, description='ID to match the ID from the google search call block.'
-    )
+    call_id: str | None = Field(None, description="ID to match the ID from the google search call block.")
 
 
-class McpServerToolResultContent(BaseModel):
-    name: Optional[str] = Field(
+class McpServerToolResultContent(LiteLLMBaseModel):
+    name: str | None = Field(
         None,
-        description='Name of the tool which is called for this specific tool call.',
+        description="Name of the tool which is called for this specific tool call.",
     )
-    server_name: Optional[str] = Field(
-        None, description='The name of the used MCP server.'
+    server_name: str | None = Field(None, description="The name of the used MCP server.")
+    type: Literal["mcp_server_tool_result"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    type: Literal['mcp_server_tool_result'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    result: Union[Result, Dict[str, Any], str] = Field(
-        ..., description='The result of the tool call.'
-    )
-    call_id: str = Field(
-        ..., description='ID to match the ID from the MCP server tool call block.'
+    result: Result | dict[str, Any] | str = Field(..., description="The result of the tool call.")
+    call_id: str = Field(..., description="ID to match the ID from the MCP server tool call block.")
+
+
+class FileSearchResultContent(LiteLLMBaseModel):
+    result: list[FileSearchResult] | None = Field(None, description="The results of the File Search.")
+    type: Literal["file_search_result"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
 
 
-class FileSearchResultContent(BaseModel):
-    result: Optional[List[FileSearchResult]] = Field(
-        None, description='The results of the File Search.'
-    )
-    type: Literal['file_search_result'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
+class AllowedTools(LiteLLMBaseModel):
+    mode: ToolChoiceType | None = Field(None, description="The mode of the tool choice.")
+    tools: list[str] | None = Field(None, description="The names of the allowed tools.")
 
 
-class AllowedTools(BaseModel):
-    mode: Optional[ToolChoiceType] = Field(
-        None, description='The mode of the tool choice.'
+class DeepResearchAgentConfig(LiteLLMBaseModel):
+    type: Literal["deep-research"] = Field(
+        "deep-research",
+        description="Used as the OpenAPI type discriminator for the content oneof.",
     )
-    tools: Optional[List[str]] = Field(
-        None, description='The names of the allowed tools.'
+    thinking_summaries: ThinkingSummaries | None = Field(
+        None, description="Whether to include thought summaries in the response."
     )
 
 
-class DeepResearchAgentConfig(BaseModel):
-    type: Literal['deep-research'] = Field(
-        'deep-research',
-        description='Used as the OpenAPI type discriminator for the content oneof.',
-    )
-    thinking_summaries: Optional[ThinkingSummaries] = Field(
-        None, description='Whether to include thought summaries in the response.'
-    )
-
-
-class McpServer(BaseModel):
-    type: Literal['mcp_server']
-    name: Optional[str] = Field(None, description='The name of the MCPServer.')
-    url: Optional[str] = Field(
+class McpServer(LiteLLMBaseModel):
+    type: Literal["mcp_server"]
+    name: str | None = Field(None, description="The name of the MCPServer.")
+    url: str | None = Field(
         None,
         description='The full URL for the MCPServer endpoint.\nExample: "https://api.example.com/mcp"',
     )
-    headers: Optional[Dict[str, str]] = Field(
+    headers: dict[str, str] | None = Field(
         None,
-        description='Optional: Fields for authentication headers, timeouts, etc., if needed.',
+        description="Optional: Fields for authentication headers, timeouts, etc., if needed.",
     )
-    allowed_tools: Optional[List[AllowedTools]] = Field(
-        None, description='The allowed tools.'
-    )
+    allowed_tools: list[AllowedTools] | None = Field(None, description="The allowed tools.")
 
 
-class ModalityTokens(BaseModel):
-    modality: Optional[ResponseModality] = Field(
-        None, description='The modality associated with the token count.'
-    )
-    tokens: Optional[int] = Field(
-        None, description='Number of tokens for the modality.'
-    )
+class ModalityTokens(LiteLLMBaseModel):
+    modality: ResponseModality | None = Field(None, description="The modality associated with the token count.")
+    tokens: int | None = Field(None, description="Number of tokens for the modality.")
 
 
-class ImageDelta(BaseModel):
-    data: Optional[Base64Str] = None
-    uri: Optional[str] = None
-    mime_type: Optional[ImageMimeTypeOption] = None
-    type: Literal['image'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    resolution: Optional[MediaResolution] = Field(
-        None, description='The resolution of the media.'
-    )
+class ImageDelta(LiteLLMBaseModel):
+    data: Base64Str | None = None
+    uri: str | None = None
+    mime_type: ImageMimeTypeOption | None = None
+    type: Literal["image"] = Field(..., description="Used as the OpenAPI type discriminator for the content oneof.")
+    resolution: MediaResolution | None = Field(None, description="The resolution of the media.")
 
 
-class AudioDelta(BaseModel):
-    data: Optional[Base64Str] = None
-    uri: Optional[str] = None
-    mime_type: Optional[AudioMimeTypeOption] = None
-    type: Literal['audio'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
+class AudioDelta(LiteLLMBaseModel):
+    data: Base64Str | None = None
+    uri: str | None = None
+    mime_type: AudioMimeTypeOption | None = None
+    type: Literal["audio"] = Field(..., description="Used as the OpenAPI type discriminator for the content oneof.")
 
 
-class VideoDelta(BaseModel):
-    data: Optional[Base64Str] = None
-    uri: Optional[str] = None
-    mime_type: Optional[VideoMimeTypeOption] = None
-    type: Literal['video'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    resolution: Optional[MediaResolution] = Field(
-        None, description='The resolution of the media.'
-    )
+class VideoDelta(LiteLLMBaseModel):
+    data: Base64Str | None = None
+    uri: str | None = None
+    mime_type: VideoMimeTypeOption | None = None
+    type: Literal["video"] = Field(..., description="Used as the OpenAPI type discriminator for the content oneof.")
+    resolution: MediaResolution | None = Field(None, description="The resolution of the media.")
 
 
-class ThoughtSummaryDelta(BaseModel):
-    type: Literal['thought_summary'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
+class ThoughtSummaryDelta(LiteLLMBaseModel):
+    type: Literal["thought_summary"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    content: Optional[Union[TextContent, ImageContent]] = Field(
-        None, discriminator='type'
-    )
+    content: TextContent | ImageContent | None = Field(None, discriminator="type")
 
 
-class FunctionResultDelta(BaseModel):
-    name: Optional[str] = None
-    is_error: Optional[bool] = None
-    type: Literal['function_result'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
+class FunctionResultDelta(LiteLLMBaseModel):
+    name: str | None = None
+    is_error: bool | None = None
+    type: Literal["function_result"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    result: Optional[Union[Result, str]] = Field(
-        None, description='Tool call result delta.'
-    )
-    call_id: Optional[str] = Field(
-        None, description='ID to match the ID from the function call block.'
-    )
+    result: Result | str | None = Field(None, description="Tool call result delta.")
+    call_id: str | None = Field(None, description="ID to match the ID from the function call block.")
 
 
-class McpServerToolResultDelta(BaseModel):
-    name: Optional[str] = None
-    server_name: Optional[str] = None
-    type: Literal['mcp_server_tool_result'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
+class McpServerToolResultDelta(LiteLLMBaseModel):
+    name: str | None = None
+    server_name: str | None = None
+    type: Literal["mcp_server_tool_result"] = Field(
+        ..., description="Used as the OpenAPI type discriminator for the content oneof."
     )
-    result: Optional[Union[Result, str]] = Field(
-        None, description='Tool call result delta.'
-    )
-    call_id: Optional[str] = Field(
-        None, description='ID to match the ID from the function call block.'
-    )
+    result: Result | str | None = Field(None, description="Tool call result delta.")
+    call_id: str | None = Field(None, description="ID to match the ID from the function call block.")
 
 
-class ErrorEvent(BaseModel):
-    event_type: Literal['error'] = 'error'
-    error: Optional[Error] = None
-    event_id: Optional[str] = Field(
+class ErrorEvent(LiteLLMBaseModel):
+    event_type: Literal["error"] = "error"
+    error: Error | None = None
+    event_id: str | None = Field(
         None,
-        description='The event_id token to be used to resume the interaction stream, from\nthis event.',
+        description="The event_id token to be used to resume the interaction stream, from\nthis event.",
     )
 
 
-class ToolChoiceConfig(BaseModel):
-    allowed_tools: Optional[AllowedTools] = None
+class ToolChoiceConfig(LiteLLMBaseModel):
+    allowed_tools: AllowedTools | None = None
 
 
-class Tool(
-    RootModel[
-        Union[
-            Function,
-            GoogleSearch,
-            CodeExecution,
-            UrlContext,
-            ComputerUse,
-            McpServer,
-            FileSearch,
-        ]
-    ]
-):
-    root: Union[
-        Function,
-        GoogleSearch,
-        CodeExecution,
-        UrlContext,
-        ComputerUse,
-        McpServer,
-        FileSearch,
-    ] = Field(..., discriminator='type')
+class Tool(RootModel[Function | GoogleSearch | CodeExecution | UrlContext | ComputerUse | McpServer | FileSearch]):
+    root: Function | GoogleSearch | CodeExecution | UrlContext | ComputerUse | McpServer | FileSearch = Field(
+        ..., discriminator="type"
+    )
 
 
-class ThoughtContent(BaseModel):
-    signature: Optional[Base64Str] = Field(
+class ThoughtContent(LiteLLMBaseModel):
+    signature: Base64Str | None = Field(
         None,
-        description='Signature to match the backend source to be part of the generation.',
+        description="Signature to match the backend source to be part of the generation.",
     )
-    type: Literal['thought'] = Field(
-        ..., description='Used as the OpenAPI type discriminator for the content oneof.'
-    )
-    summary: Optional[ThoughtSummary] = Field(
-        None, description='A summary of the thought.'
-    )
+    type: Literal["thought"] = Field(..., description="Used as the OpenAPI type discriminator for the content oneof.")
+    summary: ThoughtSummary | None = Field(None, description="A summary of the thought.")
 
 
-class ToolChoice(RootModel[Union[ToolChoiceType, ToolChoiceConfig]]):
-    root: Union[ToolChoiceType, ToolChoiceConfig] = Field(
-        ..., description='The configuration for tool choice.'
-    )
+class ToolChoice(RootModel[ToolChoiceType | ToolChoiceConfig]):
+    root: ToolChoiceType | ToolChoiceConfig = Field(..., description="The configuration for tool choice.")
 
 
-class Usage(BaseModel):
-    total_input_tokens: Optional[int] = Field(
-        None, description='Number of tokens in the prompt (context).'
+class Usage(LiteLLMBaseModel):
+    total_input_tokens: int | None = Field(None, description="Number of tokens in the prompt (context).")
+    input_tokens_by_modality: list[ModalityTokens] | None = Field(
+        None, description="A breakdown of input token usage by modality."
     )
-    input_tokens_by_modality: Optional[List[ModalityTokens]] = Field(
-        None, description='A breakdown of input token usage by modality.'
-    )
-    total_cached_tokens: Optional[int] = Field(
+    total_cached_tokens: int | None = Field(
         None,
-        description='Number of tokens in the cached part of the prompt (the cached content).',
+        description="Number of tokens in the cached part of the prompt (the cached content).",
     )
-    cached_tokens_by_modality: Optional[List[ModalityTokens]] = Field(
-        None, description='A breakdown of cached token usage by modality.'
+    cached_tokens_by_modality: list[ModalityTokens] | None = Field(
+        None, description="A breakdown of cached token usage by modality."
     )
-    total_output_tokens: Optional[int] = Field(
-        None, description='Total number of tokens across all the generated responses.'
+    total_output_tokens: int | None = Field(
+        None, description="Total number of tokens across all the generated responses."
     )
-    output_tokens_by_modality: Optional[List[ModalityTokens]] = Field(
-        None, description='A breakdown of output token usage by modality.'
+    output_tokens_by_modality: list[ModalityTokens] | None = Field(
+        None, description="A breakdown of output token usage by modality."
     )
-    total_tool_use_tokens: Optional[int] = Field(
-        None, description='Number of tokens present in tool-use prompt(s).'
+    total_tool_use_tokens: int | None = Field(None, description="Number of tokens present in tool-use prompt(s).")
+    tool_use_tokens_by_modality: list[ModalityTokens] | None = Field(
+        None, description="A breakdown of tool-use token usage by modality."
     )
-    tool_use_tokens_by_modality: Optional[List[ModalityTokens]] = Field(
-        None, description='A breakdown of tool-use token usage by modality.'
-    )
-    total_reasoning_tokens: Optional[int] = Field(
-        None, description='Number of tokens of thoughts for thinking models.'
-    )
-    total_tokens: Optional[int] = Field(
+    total_reasoning_tokens: int | None = Field(None, description="Number of tokens of thoughts for thinking models.")
+    total_tokens: int | None = Field(
         None,
-        description='Total token count for the interaction request (prompt + responses + other\ninternal tokens).',
+        description="Total token count for the interaction request (prompt + responses + other\ninternal tokens).",
     )
 
 
-class ContentDelta(BaseModel):
-    index: Optional[int] = None
-    event_type: Literal['content.delta'] = 'content.delta'
-    event_id: Optional[str] = Field(
+class ContentDelta(LiteLLMBaseModel):
+    index: int | None = None
+    event_type: Literal["content.delta"] = "content.delta"
+    event_id: str | None = Field(
         None,
-        description='The event_id token to be used to resume the interaction stream, from\nthis event.',
+        description="The event_id token to be used to resume the interaction stream, from\nthis event.",
     )
-    delta: Optional[
-        Union[
-            TextDelta,
-            ImageDelta,
-            AudioDelta,
-            DocumentDelta,
-            VideoDelta,
-            ThoughtSummaryDelta,
-            ThoughtSignatureDelta,
-            FunctionCallDelta,
-            FunctionResultDelta,
-            CodeExecutionCallDelta,
-            CodeExecutionResultDelta,
-            UrlContextCallDelta,
-            UrlContextResultDelta,
-            GoogleSearchCallDelta,
-            GoogleSearchResultDelta,
-            McpServerToolCallDelta,
-            McpServerToolResultDelta,
-            FileSearchResultDelta,
-        ]
-    ] = Field(None, discriminator='type')
+    delta: (
+        TextDelta
+        | ImageDelta
+        | AudioDelta
+        | DocumentDelta
+        | VideoDelta
+        | ThoughtSummaryDelta
+        | ThoughtSignatureDelta
+        | FunctionCallDelta
+        | FunctionResultDelta
+        | CodeExecutionCallDelta
+        | CodeExecutionResultDelta
+        | UrlContextCallDelta
+        | UrlContextResultDelta
+        | GoogleSearchCallDelta
+        | GoogleSearchResultDelta
+        | McpServerToolCallDelta
+        | McpServerToolResultDelta
+        | FileSearchResultDelta
+        | None
+    ) = Field(None, discriminator="type")
 
 
 class Content(
     RootModel[
-        Union[
-            TextContent,
-            ImageContent,
-            AudioContent,
-            DocumentContent,
-            VideoContent,
-            ThoughtContent,
-            FunctionCallContent,
-            FunctionResultContent,
-            CodeExecutionCallContent,
-            CodeExecutionResultContent,
-            UrlContextCallContent,
-            UrlContextResultContent,
-            GoogleSearchCallContent,
-            GoogleSearchResultContent,
-            McpServerToolCallContent,
-            McpServerToolResultContent,
-            FileSearchResultContent,
-        ]
+        TextContent
+        | ImageContent
+        | AudioContent
+        | DocumentContent
+        | VideoContent
+        | ThoughtContent
+        | FunctionCallContent
+        | FunctionResultContent
+        | CodeExecutionCallContent
+        | CodeExecutionResultContent
+        | UrlContextCallContent
+        | UrlContextResultContent
+        | GoogleSearchCallContent
+        | GoogleSearchResultContent
+        | McpServerToolCallContent
+        | McpServerToolResultContent
+        | FileSearchResultContent
     ]
 ):
-    root: Union[
-        TextContent,
-        ImageContent,
-        AudioContent,
-        DocumentContent,
-        VideoContent,
-        ThoughtContent,
-        FunctionCallContent,
-        FunctionResultContent,
-        CodeExecutionCallContent,
-        CodeExecutionResultContent,
-        UrlContextCallContent,
-        UrlContextResultContent,
-        GoogleSearchCallContent,
-        GoogleSearchResultContent,
-        McpServerToolCallContent,
-        McpServerToolResultContent,
-        FileSearchResultContent,
-    ] = Field(..., description='The content of the response.', discriminator='type')
+    root: (
+        TextContent
+        | ImageContent
+        | AudioContent
+        | DocumentContent
+        | VideoContent
+        | ThoughtContent
+        | FunctionCallContent
+        | FunctionResultContent
+        | CodeExecutionCallContent
+        | CodeExecutionResultContent
+        | UrlContextCallContent
+        | UrlContextResultContent
+        | GoogleSearchCallContent
+        | GoogleSearchResultContent
+        | McpServerToolCallContent
+        | McpServerToolResultContent
+        | FileSearchResultContent
+    ) = Field(..., description="The content of the response.", discriminator="type")
 
 
-class Turn(BaseModel):
-    role: Optional[str] = Field(
+class Turn(LiteLLMBaseModel):
+    role: str | None = Field(
         None,
-        description='The originator of this turn. Must be user for input or model for\nmodel output.',
+        description="The originator of this turn. Must be user for input or model for\nmodel output.",
     )
-    content: Optional[Union[str, List[Content]]] = Field(
-        None, description='The content of the turn.'
-    )
+    content: str | list[Content] | None = Field(None, description="The content of the turn.")
 
 
-class GenerationConfig(BaseModel):
-    temperature: Optional[float] = Field(
-        None, description='Controls the randomness of the output.'
-    )
-    top_p: Optional[float] = Field(
+class GenerationConfig(LiteLLMBaseModel):
+    temperature: float | None = Field(None, description="Controls the randomness of the output.")
+    top_p: float | None = Field(
         None,
-        description='The maximum cumulative probability of tokens to consider when sampling.',
+        description="The maximum cumulative probability of tokens to consider when sampling.",
     )
-    seed: Optional[int] = Field(
-        None, description='Seed used in decoding for reproducibility.'
-    )
-    stop_sequences: Optional[List[str]] = Field(
+    seed: int | None = Field(None, description="Seed used in decoding for reproducibility.")
+    stop_sequences: list[str] | None = Field(
         None,
-        description='A list of character sequences that will stop output interaction.',
+        description="A list of character sequences that will stop output interaction.",
     )
-    tool_choice: Optional[ToolChoice] = Field(
-        None, description='The tool choice for the interaction.'
+    tool_choice: ToolChoice | None = Field(None, description="The tool choice for the interaction.")
+    thinking_level: ThinkingLevel | None = Field(
+        None, description="The level of thought tokens that the model should generate."
     )
-    thinking_level: Optional[ThinkingLevel] = Field(
-        None, description='The level of thought tokens that the model should generate.'
+    thinking_summaries: ThinkingSummaries | None = Field(
+        None, description="Whether to include thought summaries in the response."
     )
-    thinking_summaries: Optional[ThinkingSummaries] = Field(
-        None, description='Whether to include thought summaries in the response.'
-    )
-    max_output_tokens: Optional[int] = Field(
-        None, description='The maximum number of tokens to include in the response.'
-    )
-    speech_config: Optional[List[SpeechConfig]] = Field(
-        None, description='Configuration for speech interaction.'
-    )
+    max_output_tokens: int | None = Field(None, description="The maximum number of tokens to include in the response.")
+    speech_config: list[SpeechConfig] | None = Field(None, description="Configuration for speech interaction.")
 
 
-class ContentStart(BaseModel):
-    index: Optional[int] = None
-    content: Optional[Content] = None
-    event_type: Literal['content.start'] = 'content.start'
-    event_id: Optional[str] = Field(
+class ContentStart(LiteLLMBaseModel):
+    index: int | None = None
+    content: Content | None = None
+    event_type: Literal["content.start"] = "content.start"
+    event_id: str | None = Field(
         None,
-        description='The event_id token to be used to resume the interaction stream, from\nthis event.',
+        description="The event_id token to be used to resume the interaction stream, from\nthis event.",
     )
 
 
-class Interaction(BaseModel):
-    model: Optional[ModelOption] = Field(
-        None, description='The name of the `Model` used for generating the interaction.'
-    )
-    agent: Optional[AgentOption] = Field(
-        None, description='The name of the `Agent` used for generating the interaction.'
-    )
+class Interaction(LiteLLMBaseModel):
+    model: ModelOption | None = Field(None, description="The name of the `Model` used for generating the interaction.")
+    agent: AgentOption | None = Field(None, description="The name of the `Agent` used for generating the interaction.")
     id: str = Field(
         ...,
-        description='Output only. A unique identifier for the interaction completion.',
+        description="Output only. A unique identifier for the interaction completion.",
     )
-    status: Status1 = Field(
-        ..., description='Output only. The status of the interaction.'
-    )
-    created: Optional[AwareDatetime] = Field(
+    status: Status1 = Field(..., description="Output only. The status of the interaction.")
+    created: AwareDatetime | None = Field(
         None,
-        description='Output only. The time at which the response was created in ISO 8601 format\n(YYYY-MM-DDThh:mm:ssZ).',
+        description="Output only. The time at which the response was created in ISO 8601 format\n(YYYY-MM-DDThh:mm:ssZ).",
     )
-    updated: Optional[AwareDatetime] = Field(
+    updated: AwareDatetime | None = Field(
         None,
-        description='Output only. The time at which the response was last updated in ISO 8601 format\n(YYYY-MM-DDThh:mm:ssZ).',
+        description="Output only. The time at which the response was last updated in ISO 8601 format\n(YYYY-MM-DDThh:mm:ssZ).",
     )
-    role: Optional[str] = Field(
-        None, description='Output only. The role of the interaction.'
-    )
-    outputs: Optional[List[Content]] = Field(
-        None, description='Output only. Responses from the model.'
-    )
-    system_instruction: Optional[str] = Field(
-        None, description='System instruction for the interaction.'
-    )
-    tools: Optional[List[Tool]] = Field(
+    outputs: list[Content] | None = Field(None, description="Output only. Responses from the model.")
+    system_instruction: str | None = Field(None, description="System instruction for the interaction.")
+    tools: list[Tool] | None = Field(
         None,
-        description='A list of tool declarations the model may call during interaction.',
+        description="A list of tool declarations the model may call during interaction.",
     )
-    background: Optional[bool] = Field(
-        None, description='Whether to run the model interaction in the background.'
+    background: bool | None = Field(None, description="Whether to run the model interaction in the background.")
+    object: Literal["interaction"] = Field(
+        "interaction",
+        description="Output only. The object type of the interaction. Always set to `interaction`.",
     )
-    object: Literal['interaction'] = Field(
-        'interaction',
-        description='Output only. The object type of the interaction. Always set to `interaction`.',
-    )
-    usage: Optional[Usage] = Field(
+    usage: Usage | None = Field(
         None,
         description="Output only. Statistics on the interaction request's token usage.",
     )
-    response_modalities: Optional[List[ResponseModality]] = Field(
+    response_modalities: list[ResponseModality] | None = Field(
         None,
-        description='The requested modalities of the response (TEXT, IMAGE, AUDIO).',
+        description="The requested modalities of the response (TEXT, IMAGE, AUDIO).",
     )
-    response_format: Optional[Any] = Field(
+    response_format: Any | None = Field(
         None,
-        description='Enforces that the generated response is a JSON object that complies with\nthe JSON schema specified in this field.',
+        description="Enforces that the generated response is a JSON object that complies with\nthe JSON schema specified in this field.",
     )
-    response_mime_type: Optional[str] = Field(
+    response_mime_type: str | None = Field(
         None,
-        description='The mime type of the response. This is required if response_format is set.',
+        description="The mime type of the response. This is required if response_format is set.",
     )
-    previous_interaction_id: Optional[str] = Field(
-        None, description='The ID of the previous interaction, if any.'
+    previous_interaction_id: str | None = Field(None, description="The ID of the previous interaction, if any.")
+    input: str | list[Content] | list[Turn] | Content | None = Field(
+        None, description="The inputs for the interaction."
     )
-    input: Optional[Union[str, List[Content], List[Turn], Content]] = Field(
-        None, description='The inputs for the interaction.'
-    )
-    generation_config: Optional[GenerationConfig] = Field(
+    generation_config: GenerationConfig | None = Field(
         None,
-        description='Input only. Configuration parameters for the model interaction.',
+        description="Input only. Configuration parameters for the model interaction.",
     )
-    agent_config: Optional[Union[DynamicAgentConfig, DeepResearchAgentConfig]] = Field(
-        None, description='Configuration for the agent.', discriminator='type'
+    agent_config: DynamicAgentConfig | DeepResearchAgentConfig | None = Field(
+        None, description="Configuration for the agent.", discriminator="type"
     )
 
 
-class CreateModelInteractionParams(BaseModel):
-    model: ModelOption = Field(
-        ..., description='The name of the `Model` used for generating the interaction.'
-    )
-    stream: Optional[bool] = Field(
-        None, description='Input only. Whether the interaction will be streamed.'
-    )
-    store: Optional[bool] = Field(
+class CreateModelInteractionParams(LiteLLMBaseModel):
+    model: ModelOption = Field(..., description="The name of the `Model` used for generating the interaction.")
+    stream: bool | None = Field(None, description="Input only. Whether the interaction will be streamed.")
+    store: bool | None = Field(
         None,
-        description='Input only. Whether to store the response and request for later retrieval.',
+        description="Input only. Whether to store the response and request for later retrieval.",
     )
-    id: Optional[str] = Field(
+    id: str | None = Field(
         None,
-        description='Output only. A unique identifier for the interaction completion.',
+        description="Output only. A unique identifier for the interaction completion.",
     )
-    status: Optional[Status3] = Field(
-        None, description='Output only. The status of the interaction.'
-    )
-    created: Optional[AwareDatetime] = Field(
+    status: Status3 | None = Field(None, description="Output only. The status of the interaction.")
+    created: AwareDatetime | None = Field(
         None,
-        description='Output only. The time at which the response was created in ISO 8601 format\n(YYYY-MM-DDThh:mm:ssZ).',
+        description="Output only. The time at which the response was created in ISO 8601 format\n(YYYY-MM-DDThh:mm:ssZ).",
     )
-    updated: Optional[AwareDatetime] = Field(
+    updated: AwareDatetime | None = Field(
         None,
-        description='Output only. The time at which the response was last updated in ISO 8601 format\n(YYYY-MM-DDThh:mm:ssZ).',
+        description="Output only. The time at which the response was last updated in ISO 8601 format\n(YYYY-MM-DDThh:mm:ssZ).",
     )
-    role: Optional[str] = Field(
-        None, description='Output only. The role of the interaction.'
-    )
-    outputs: Optional[List[Content]] = Field(
-        None, description='Output only. Responses from the model.'
-    )
-    system_instruction: Optional[str] = Field(
-        None, description='System instruction for the interaction.'
-    )
-    tools: Optional[List[Tool]] = Field(
+    outputs: list[Content] | None = Field(None, description="Output only. Responses from the model.")
+    system_instruction: str | None = Field(None, description="System instruction for the interaction.")
+    tools: list[Tool] | None = Field(
         None,
-        description='A list of tool declarations the model may call during interaction.',
+        description="A list of tool declarations the model may call during interaction.",
     )
-    background: Optional[bool] = Field(
-        None, description='Whether to run the model interaction in the background.'
-    )
-    usage: Optional[Usage] = Field(
+    background: bool | None = Field(None, description="Whether to run the model interaction in the background.")
+    usage: Usage | None = Field(
         None,
         description="Output only. Statistics on the interaction request's token usage.",
     )
-    response_modalities: Optional[List[ResponseModality]] = Field(
+    response_modalities: list[ResponseModality] | None = Field(
         None,
-        description='The requested modalities of the response (TEXT, IMAGE, AUDIO).',
+        description="The requested modalities of the response (TEXT, IMAGE, AUDIO).",
     )
-    response_format: Optional[Any] = Field(
+    response_format: Any | None = Field(
         None,
-        description='Enforces that the generated response is a JSON object that complies with\nthe JSON schema specified in this field.',
+        description="Enforces that the generated response is a JSON object that complies with\nthe JSON schema specified in this field.",
     )
-    response_mime_type: Optional[str] = Field(
+    response_mime_type: str | None = Field(
         None,
-        description='The mime type of the response. This is required if response_format is set.',
+        description="The mime type of the response. This is required if response_format is set.",
     )
-    previous_interaction_id: Optional[str] = Field(
-        None, description='The ID of the previous interaction, if any.'
-    )
-    input: Union[str, List[Content], List[Turn], Content] = Field(
-        ..., description='The inputs for the interaction.'
-    )
-    generation_config: Optional[GenerationConfig] = Field(
+    previous_interaction_id: str | None = Field(None, description="The ID of the previous interaction, if any.")
+    input: str | list[Content] | list[Turn] | Content = Field(..., description="The inputs for the interaction.")
+    generation_config: GenerationConfig | None = Field(
         None,
-        description='Input only. Configuration parameters for the model interaction.',
+        description="Input only. Configuration parameters for the model interaction.",
     )
 
 
-class CreateAgentInteractionParams(BaseModel):
-    agent: AgentOption = Field(
-        ..., description='The name of the `Agent` used for generating the interaction.'
-    )
-    stream: Optional[bool] = Field(
-        None, description='Input only. Whether the interaction will be streamed.'
-    )
-    store: Optional[bool] = Field(
+class CreateAgentInteractionParams(LiteLLMBaseModel):
+    agent: AgentOption = Field(..., description="The name of the `Agent` used for generating the interaction.")
+    stream: bool | None = Field(None, description="Input only. Whether the interaction will be streamed.")
+    store: bool | None = Field(
         None,
-        description='Input only. Whether to store the response and request for later retrieval.',
+        description="Input only. Whether to store the response and request for later retrieval.",
     )
-    id: Optional[str] = Field(
+    id: str | None = Field(
         None,
-        description='Output only. A unique identifier for the interaction completion.',
+        description="Output only. A unique identifier for the interaction completion.",
     )
-    status: Optional[Status3] = Field(
-        None, description='Output only. The status of the interaction.'
-    )
-    created: Optional[AwareDatetime] = Field(
+    status: Status3 | None = Field(None, description="Output only. The status of the interaction.")
+    created: AwareDatetime | None = Field(
         None,
-        description='Output only. The time at which the response was created in ISO 8601 format\n(YYYY-MM-DDThh:mm:ssZ).',
+        description="Output only. The time at which the response was created in ISO 8601 format\n(YYYY-MM-DDThh:mm:ssZ).",
     )
-    updated: Optional[AwareDatetime] = Field(
+    updated: AwareDatetime | None = Field(
         None,
-        description='Output only. The time at which the response was last updated in ISO 8601 format\n(YYYY-MM-DDThh:mm:ssZ).',
+        description="Output only. The time at which the response was last updated in ISO 8601 format\n(YYYY-MM-DDThh:mm:ssZ).",
     )
-    role: Optional[str] = Field(
-        None, description='Output only. The role of the interaction.'
-    )
-    outputs: Optional[List[Content]] = Field(
-        None, description='Output only. Responses from the model.'
-    )
-    system_instruction: Optional[str] = Field(
-        None, description='System instruction for the interaction.'
-    )
-    tools: Optional[List[Tool]] = Field(
+    outputs: list[Content] | None = Field(None, description="Output only. Responses from the model.")
+    system_instruction: str | None = Field(None, description="System instruction for the interaction.")
+    tools: list[Tool] | None = Field(
         None,
-        description='A list of tool declarations the model may call during interaction.',
+        description="A list of tool declarations the model may call during interaction.",
     )
-    background: Optional[bool] = Field(
-        None, description='Whether to run the model interaction in the background.'
-    )
-    usage: Optional[Usage] = Field(
+    background: bool | None = Field(None, description="Whether to run the model interaction in the background.")
+    usage: Usage | None = Field(
         None,
         description="Output only. Statistics on the interaction request's token usage.",
     )
-    response_modalities: Optional[List[ResponseModality]] = Field(
+    response_modalities: list[ResponseModality] | None = Field(
         None,
-        description='The requested modalities of the response (TEXT, IMAGE, AUDIO).',
+        description="The requested modalities of the response (TEXT, IMAGE, AUDIO).",
     )
-    response_format: Optional[Any] = Field(
+    response_format: Any | None = Field(
         None,
-        description='Enforces that the generated response is a JSON object that complies with\nthe JSON schema specified in this field.',
+        description="Enforces that the generated response is a JSON object that complies with\nthe JSON schema specified in this field.",
     )
-    response_mime_type: Optional[str] = Field(
+    response_mime_type: str | None = Field(
         None,
-        description='The mime type of the response. This is required if response_format is set.',
+        description="The mime type of the response. This is required if response_format is set.",
     )
-    previous_interaction_id: Optional[str] = Field(
-        None, description='The ID of the previous interaction, if any.'
-    )
-    input: Union[str, List[Content], List[Turn], Content] = Field(
-        ..., description='The inputs for the interaction.'
-    )
-    agent_config: Optional[Union[DynamicAgentConfig, DeepResearchAgentConfig]] = Field(
-        None, description='Configuration for the agent.', discriminator='type'
+    previous_interaction_id: str | None = Field(None, description="The ID of the previous interaction, if any.")
+    input: str | list[Content] | list[Turn] | Content = Field(..., description="The inputs for the interaction.")
+    agent_config: DynamicAgentConfig | DeepResearchAgentConfig | None = Field(
+        None, description="Configuration for the agent.", discriminator="type"
     )
 
 
-class InteractionEvent(BaseModel):
-    event_type: Literal['interaction.start', 'interaction.complete']
-    interaction: Optional[Interaction] = None
-    event_id: Optional[str] = Field(
+class InteractionEvent(LiteLLMBaseModel):
+    event_type: Literal["interaction.start", "interaction.complete"]
+    interaction: Interaction | None = None
+    event_id: str | None = Field(
         None,
-        description='The event_id token to be used to resume the interaction stream, from\nthis event.',
+        description="The event_id token to be used to resume the interaction stream, from\nthis event.",
+    )
+
+
+# ---------------------------------------------------------------
+# New schema SSE event types (Api-Revision: 2026-05-20)
+# These replace the legacy content.* / interaction.start|complete
+# events and will become the only events after June 8, 2026.
+# ---------------------------------------------------------------
+
+
+class StepStart(LiteLLMBaseModel):
+    """Emitted when a new step begins (replaces content.start)."""
+
+    event_type: Literal["step.start"] = "step.start"
+    index: int | None = None
+    step: dict[str, Any] | None = Field(
+        None,
+        description="The initial step data (type, content, signature, etc.).",
+    )
+    event_id: str | None = Field(
+        None,
+        description="The event_id token to be used to resume the interaction stream.",
+    )
+
+
+class StepDelta(LiteLLMBaseModel):
+    """Emitted for incremental step content (replaces content.delta)."""
+
+    event_type: Literal["step.delta"] = "step.delta"
+    index: int | None = None
+    delta: dict[str, Any] | None = Field(
+        None,
+        description="Incremental content delta (e.g. text, arguments_delta for function calls).",
+    )
+    event_id: str | None = Field(
+        None,
+        description="The event_id token to be used to resume the interaction stream.",
+    )
+
+
+class StepStop(LiteLLMBaseModel):
+    """Emitted when a step finishes (replaces content.stop)."""
+
+    event_type: Literal["step.stop"] = "step.stop"
+    index: int | None = None
+    status: str | None = Field(
+        None,
+        description="Step completion status (e.g. 'done').",
+    )
+    event_id: str | None = Field(
+        None,
+        description="The event_id token to be used to resume the interaction stream.",
+    )
+
+
+class InteractionCreated(LiteLLMBaseModel):
+    """Emitted when the interaction is first created (replaces interaction.start)."""
+
+    event_type: Literal["interaction.created"] = "interaction.created"
+    interaction: dict[str, Any] | None = None
+    event_id: str | None = Field(
+        None,
+        description="The event_id token to be used to resume the interaction stream.",
+    )
+
+
+class InteractionInProgress(LiteLLMBaseModel):
+    """Emitted while the interaction is running."""
+
+    event_type: Literal["interaction.in_progress"] = "interaction.in_progress"
+    interaction_id: str | None = None
+    event_id: str | None = Field(
+        None,
+        description="The event_id token to be used to resume the interaction stream.",
+    )
+
+
+class InteractionCompleted(LiteLLMBaseModel):
+    """Emitted when the interaction finishes (replaces interaction.complete)."""
+
+    event_type: Literal["interaction.completed"] = "interaction.completed"
+    interaction: dict[str, Any] | None = None
+    event_id: str | None = Field(
+        None,
+        description="The event_id token to be used to resume the interaction stream.",
+    )
+
+
+class InteractionRequiresAction(LiteLLMBaseModel):
+    """Emitted when the interaction is paused waiting for a tool result."""
+
+    event_type: Literal["interaction.requires_action"] = "interaction.requires_action"
+    interaction_id: str | None = None
+    event_id: str | None = Field(
+        None,
+        description="The event_id token to be used to resume the interaction stream.",
     )
 
 
 class InteractionSseEvent(
     RootModel[
-        Union[
-            InteractionEvent,
-            InteractionStatusUpdate,
-            ContentStart,
-            ContentDelta,
-            ContentStop,
-            ErrorEvent,
-        ]
+        # New schema events (Api-Revision: 2026-05-20)
+        StepStart
+        | StepDelta
+        | StepStop
+        | InteractionCreated
+        | InteractionInProgress
+        | InteractionCompleted
+        | InteractionRequiresAction
+        # Legacy schema events (Api-Revision: 2026-05-07, removed June 8 2026)
+        | InteractionEvent
+        | InteractionStatusUpdate
+        | ContentStart
+        | ContentDelta
+        | ContentStop
+        | ErrorEvent
     ]
 ):
-    root: Union[
-        InteractionEvent,
-        InteractionStatusUpdate,
-        ContentStart,
-        ContentDelta,
-        ContentStop,
-        ErrorEvent,
-    ] = Field(..., discriminator='event_type')
+    root: (
+        StepStart
+        | StepDelta
+        | StepStop
+        | InteractionCreated
+        | InteractionInProgress
+        | InteractionCompleted
+        | InteractionRequiresAction
+        | InteractionEvent
+        | InteractionStatusUpdate
+        | ContentStart
+        | ContentDelta
+        | ContentStop
+        | ErrorEvent
+    ) = Field(..., discriminator="event_type")
 
 
 # ============================================================
 # LiteLLM-specific types (added manually after generation)
 # ============================================================
-# 
+#
 # When regenerating this file, copy these types to the end.
 # See README.md for regeneration instructions.
 
@@ -1185,71 +1053,129 @@ from pydantic import PrivateAttr
 from litellm.types.llms.base import BaseLiteLLMOpenAIResponseObject
 
 # Type alias for input
-InteractionInput = Union[str, Content, List[Content], List[Turn]]
+InteractionInput = str | Content | list[Content] | list[Turn]
 
 
 class InteractionsAPIResponse(BaseLiteLLMOpenAIResponseObject):
     """
     Response from the Interactions API.
-    
+
     Wraps the API response with LiteLLM-specific hidden params.
+
+    Schema notes:
+    - New schema (Api-Revision: 2026-05-20, default): response contains ``steps``.
+    - Legacy schema (Api-Revision: 2026-05-07, removed June 8 2026): response contains ``outputs``.
+    Both fields are kept here so callers work with either schema.
     """
-    id: Optional[str] = None
-    object: Optional[str] = "interaction"
-    model: Optional[str] = None
-    agent: Optional[str] = None
-    status: Optional[str] = None
-    created: Optional[str] = None
-    updated: Optional[str] = None
-    role: Optional[str] = None
-    outputs: Optional[List[Dict[str, Any]]] = None
-    usage: Optional[Dict[str, Any]] = None
-    
+
+    id: str | None = None
+    object: str | None = "interaction"
+    model: str | None = None
+    agent: str | None = None
+    status: str | None = None
+    created: str | None = None
+    updated: str | None = None
+    # Legacy schema field (Api-Revision: 2026-05-07). Remove after June 8, 2026.
+    outputs: list[dict[str, Any]] | None = None
+    # New schema field (Api-Revision: 2026-05-20).
+    steps: list[dict[str, Any]] | None = None
+    usage: dict[str, Any] | None = None
+
     _hidden_params: dict = PrivateAttr(default_factory=dict)
+
+    @property
+    def hidden_params(self) -> dict[str, object]:  # mutable-ok: API requires mutation
+        return self._hidden_params
+
+    @hidden_params.setter
+    def hidden_params(self, hidden_params: dict[str, object]) -> None:  # mutable-ok: API requires mutation
+        self._hidden_params = hidden_params
 
 
 class InteractionsAPIStreamingResponse(BaseLiteLLMOpenAIResponseObject):
     """
     Streaming response chunk from the Interactions API.
-    
-    Event types per OpenAPI spec:
+
+    New schema event types (Api-Revision: 2026-05-20):
+    - interaction.created, interaction.in_progress, interaction.completed,
+      interaction.requires_action
+    - step.start, step.delta, step.stop
+
+    Legacy event types (Api-Revision: 2026-05-07, removed June 8 2026):
     - interaction.start, interaction.status_update, interaction.complete
     - content.start, content.delta, content.stop
     - error
     """
-    event_type: Optional[str] = None
-    id: Optional[str] = None
-    object: Optional[str] = "interaction"
-    model: Optional[str] = None
-    agent: Optional[str] = None
-    status: Optional[str] = None
-    created: Optional[str] = None
-    updated: Optional[str] = None
-    role: Optional[str] = None
-    outputs: Optional[List[Dict[str, Any]]] = None
-    usage: Optional[Dict[str, Any]] = None
-    delta: Optional[Dict[str, Any]] = None
-    
+
+    event_type: str | None = None
+    id: str | None = None
+    object: str | None = "interaction"
+    model: str | None = None
+    agent: str | None = None
+    status: str | None = None
+    created: str | None = None
+    updated: str | None = None
+    # Legacy schema field (Api-Revision: 2026-05-07). Remove after June 8, 2026.
+    outputs: list[dict[str, Any]] | None = None
+    # New schema field (Api-Revision: 2026-05-20).
+    steps: list[dict[str, Any]] | None = None
+    usage: dict[str, Any] | None = None
+    delta: dict[str, Any] | None = None
+    # New schema streaming fields
+    index: int | None = None
+    step: dict[str, Any] | None = None
+    interaction_id: str | None = None
+    interaction: dict[str, Any] | None = None
+
     _hidden_params: dict = PrivateAttr(default_factory=dict)
+
+    @property
+    def hidden_params(self) -> dict[str, object]:  # mutable-ok: API requires mutation
+        return self._hidden_params
+
+    @hidden_params.setter
+    def hidden_params(self, hidden_params: dict[str, object]) -> None:  # mutable-ok: API requires mutation
+        self._hidden_params = hidden_params
 
 
 class DeleteInteractionResult(BaseLiteLLMOpenAIResponseObject):
     """Result of deleting an interaction."""
+
     success: bool = True
-    id: Optional[str] = None
-    
+    id: str | None = None
+
     _hidden_params: dict = PrivateAttr(default_factory=dict)
+
+    @property
+    def hidden_params(self) -> dict[str, object]:  # mutable-ok: API requires mutation
+        return self._hidden_params
+
+    @hidden_params.setter
+    def hidden_params(self, hidden_params: dict[str, object]) -> None:  # mutable-ok: API requires mutation
+        self._hidden_params = hidden_params
 
 
 class CancelInteractionResult(BaseLiteLLMOpenAIResponseObject):
     """Result of cancelling an interaction."""
-    id: Optional[str] = None
-    status: Optional[str] = None
-    
+
+    id: str | None = None
+    status: str | None = None
+
     _hidden_params: dict = PrivateAttr(default_factory=dict)
+
+    @property
+    def hidden_params(self) -> dict[str, object]:  # mutable-ok: API requires mutation
+        return self._hidden_params
+
+    @hidden_params.setter
+    def hidden_params(self, hidden_params: dict[str, object]) -> None:  # mutable-ok: API requires mutation
+        self._hidden_params = hidden_params
 
 
 # Backwards compatibility aliases
 InteractionTool = Tool
-InteractionToolChoiceConfig = ToolChoiceConfig
-InteractionsAPIOptionalRequestParams = Dict[str, Any]
+InteractionToolChoiceConfig: Final = ToolChoiceConfig
+InteractionsAPIOptionalRequestParams = dict[str, Any]
+
+# Agent interaction execution environment
+InteractionEnvironment = str | dict[str, Any]

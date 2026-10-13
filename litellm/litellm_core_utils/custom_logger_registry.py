@@ -8,12 +8,13 @@ Example:
     "prometheus" -> PrometheusLogger
 """
 
-from typing import Union
+from typing import Final
 
 from litellm import _custom_logger_compatible_callbacks_literal
 from litellm.integrations.agentops import AgentOps
 from litellm.integrations.anthropic_cache_control_hook import AnthropicCacheControlHook
 from litellm.integrations.argilla import ArgillaLogger
+from litellm.integrations.azure_sentinel.azure_sentinel import AzureSentinelLogger
 from litellm.integrations.azure_storage.azure_storage import AzureBlobStorageLogger
 from litellm.integrations.bitbucket import BitBucketPromptManager
 from litellm.integrations.braintrust_logging import BraintrustLogger
@@ -36,19 +37,30 @@ from litellm.integrations.langfuse.langfuse_prompt_management import (
 from litellm.integrations.langsmith import LangsmithLogger
 from litellm.integrations.litellm_agent import LiteLLMAgentModelResolver
 from litellm.integrations.literal_ai import LiteralAILogger
+from litellm.integrations.mavvrik_focus.mavvrik_focus_logger import MavvrikFocusLogger
 from litellm.integrations.mlflow import MlflowLogger
+from litellm.integrations.newrelic import NewRelicLogger
 from litellm.integrations.openmeter import OpenMeterLogger
 from litellm.integrations.opentelemetry import OpenTelemetry
 from litellm.integrations.opik.opik import OpikLogger
+from litellm.integrations.pointfive import PointFiveLogger
 from litellm.integrations.posthog import PostHogLogger
 from litellm.integrations.prometheus import PrometheusLogger
 from litellm.integrations.s3_v2 import S3Logger
 from litellm.integrations.sqs import SQSLogger
+from litellm.integrations.vantage.vantage_logger import VantageLogger
 from litellm.integrations.vector_store_integrations.vector_store_pre_call_hook import (
     VectorStorePreCallHook,
 )
-from litellm.proxy.hooks.dynamic_rate_limiter import _PROXY_DynamicRateLimitHandler
-from litellm.proxy.hooks.dynamic_rate_limiter_v3 import _PROXY_DynamicRateLimitHandlerV3
+from litellm.integrations.zerobus import ZerobusLogger
+from litellm.proxy.hooks.dynamic_rate_limiter import (  # noqa: F401  # legacy module exports
+    PROXY_DynamicRateLimitHandler,
+    _PROXY_DynamicRateLimitHandler,  # pyright: ignore[reportPrivateUsage,reportUnusedImport]  # backwards-compatible package export
+)
+from litellm.proxy.hooks.dynamic_rate_limiter_v3 import (  # noqa: F401  # legacy module exports
+    PROXY_DynamicRateLimitHandlerV3,
+    _PROXY_DynamicRateLimitHandlerV3,  # pyright: ignore[reportPrivateUsage,reportUnusedImport]  # backwards-compatible package export
+)
 
 
 class CustomLoggerRegistry:
@@ -72,6 +84,7 @@ class CustomLoggerRegistry:
         "opik": OpikLogger,
         "argilla": ArgillaLogger,
         "opentelemetry": OpenTelemetry,
+        "azure_sentinel": AzureSentinelLogger,
         "azure_storage": AzureBlobStorageLogger,
         "humanloop": HumanloopLogger,
         # OTEL compatible loggers
@@ -82,6 +95,7 @@ class CustomLoggerRegistry:
         "langtrace": OpenTelemetry,
         "weave_otel": OpenTelemetry,
         "levo": OpenTelemetry,
+        "signoz": OpenTelemetry,
         "mlflow": MlflowLogger,
         "langfuse": LangfusePromptManagement,
         "otel": OpenTelemetry,
@@ -90,16 +104,21 @@ class CustomLoggerRegistry:
         "agentops": AgentOps,
         "deepeval": DeepEvalLogger,
         "s3_v2": S3Logger,
+        "pointfive": PointFiveLogger,
+        "zerobus": ZerobusLogger,
         "aws_sqs": SQSLogger,
-        "dynamic_rate_limiter": _PROXY_DynamicRateLimitHandler,
-        "dynamic_rate_limiter_v3": _PROXY_DynamicRateLimitHandlerV3,
+        "dynamic_rate_limiter": PROXY_DynamicRateLimitHandler,
+        "dynamic_rate_limiter_v3": PROXY_DynamicRateLimitHandlerV3,
         "vector_store_pre_call_hook": VectorStorePreCallHook,
         "dotprompt": DotpromptManager,
         "bitbucket": BitBucketPromptManager,
         "gitlab": GitLabPromptManager,
         "cloudzero": CloudZeroLogger,
         "focus": FocusLogger,
+        "mavvrik": MavvrikFocusLogger,
+        "vantage": VantageLogger,
         "posthog": PostHogLogger,
+        "newrelic": NewRelicLogger,
     }
 
     try:
@@ -132,7 +151,7 @@ class CustomLoggerRegistry:
         pass  # enterprise not installed
 
     @classmethod
-    def get_callback_str_from_class_type(cls, class_type: type) -> Union[str, None]:
+    def get_callback_str_from_class_type(cls, class_type: type) -> str | None:
         """
         Get the callback string from the class type.
 
@@ -162,7 +181,7 @@ class CustomLoggerRegistry:
         Returns:
             list: List of callback strings that map to the class type
         """
-        callback_strs: list[str] = []
+        callback_strs: Final[list[str]] = []
         for (
             callback_str,
             callback_class,

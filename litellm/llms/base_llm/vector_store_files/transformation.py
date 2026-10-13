@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Union
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
@@ -34,7 +35,7 @@ class BaseVectorStoreFilesConfig(ABC):
     def get_supported_openai_params(
         self,
         operation: str,
-    ) -> Tuple[str, ...]:
+    ) -> tuple[str, ...]:
         """Return the set of OpenAI params supported for the given operation."""
 
         return tuple()
@@ -43,42 +44,38 @@ class BaseVectorStoreFilesConfig(ABC):
         self,
         *,
         operation: str,
-        non_default_params: Dict[str, Any],
-        optional_params: Dict[str, Any],
+        non_default_params: Mapping[str, object],
+        optional_params: Mapping[str, object],
         drop_params: bool,
-    ) -> Dict[str, Any]:
+    ) -> Mapping[str, object]:
         """Map non-default OpenAI params to provider-specific params."""
 
         return optional_params
 
     @abstractmethod
-    def get_auth_credentials(
-        self, litellm_params: Dict[str, Any]
-    ) -> VectorStoreFileAuthCredentials:
-        ...
+    def get_auth_credentials(self, litellm_params: dict[str, Any]) -> VectorStoreFileAuthCredentials: ...
 
     @abstractmethod
-    def get_vector_store_file_endpoints_by_type(self) -> Dict[
-        str, Tuple[Tuple[str, str], ...]
-    ]:
-        ...
+    def get_vector_store_file_endpoints_by_type(
+        self,
+    ) -> dict[str, tuple[tuple[str, str], ...]]: ...
 
     @abstractmethod
     def validate_environment(
         self,
         *,
-        headers: Dict[str, str],
-        litellm_params: Optional[GenericLiteLLMParams],
-    ) -> Dict[str, str]:
+        headers: dict[str, str],
+        litellm_params: GenericLiteLLMParams | None,
+    ) -> dict[str, str]:
         return {}
 
     @abstractmethod
     def get_complete_url(
         self,
         *,
-        api_base: Optional[str],
+        api_base: str | None,
         vector_store_id: str,
-        litellm_params: Dict[str, Any],
+        litellm_params: dict[str, Any],
     ) -> str:
         if api_base is None:
             raise ValueError("api_base is required")
@@ -91,16 +88,14 @@ class BaseVectorStoreFilesConfig(ABC):
         vector_store_id: str,
         create_request: VectorStoreFileCreateRequest,
         api_base: str,
-    ) -> Tuple[str, Dict[str, Any]]:
-        ...
+    ) -> tuple[str, dict[str, object]]: ...
 
     @abstractmethod
     def transform_create_vector_store_file_response(
         self,
         *,
         response: httpx.Response,
-    ) -> VectorStoreFileObject:
-        ...
+    ) -> VectorStoreFileObject: ...
 
     @abstractmethod
     def transform_list_vector_store_files_request(
@@ -109,16 +104,14 @@ class BaseVectorStoreFilesConfig(ABC):
         vector_store_id: str,
         query_params: VectorStoreFileListQueryParams,
         api_base: str,
-    ) -> Tuple[str, Dict[str, Any]]:
-        ...
+    ) -> tuple[str, dict[str, object]]: ...
 
     @abstractmethod
     def transform_list_vector_store_files_response(
         self,
         *,
         response: httpx.Response,
-    ) -> VectorStoreFileListResponse:
-        ...
+    ) -> VectorStoreFileListResponse: ...
 
     @abstractmethod
     def transform_retrieve_vector_store_file_request(
@@ -127,16 +120,14 @@ class BaseVectorStoreFilesConfig(ABC):
         vector_store_id: str,
         file_id: str,
         api_base: str,
-    ) -> Tuple[str, Dict[str, Any]]:
-        ...
+    ) -> tuple[str, dict[str, object]]: ...
 
     @abstractmethod
     def transform_retrieve_vector_store_file_response(
         self,
         *,
         response: httpx.Response,
-    ) -> VectorStoreFileObject:
-        ...
+    ) -> VectorStoreFileObject: ...
 
     @abstractmethod
     def transform_retrieve_vector_store_file_content_request(
@@ -145,16 +136,14 @@ class BaseVectorStoreFilesConfig(ABC):
         vector_store_id: str,
         file_id: str,
         api_base: str,
-    ) -> Tuple[str, Dict[str, Any]]:
-        ...
+    ) -> tuple[str, dict[str, object]]: ...
 
     @abstractmethod
     def transform_retrieve_vector_store_file_content_response(
         self,
         *,
         response: httpx.Response,
-    ) -> VectorStoreFileContentResponse:
-        ...
+    ) -> VectorStoreFileContentResponse: ...
 
     @abstractmethod
     def transform_update_vector_store_file_request(
@@ -164,16 +153,14 @@ class BaseVectorStoreFilesConfig(ABC):
         file_id: str,
         update_request: VectorStoreFileUpdateRequest,
         api_base: str,
-    ) -> Tuple[str, Dict[str, Any]]:
-        ...
+    ) -> tuple[str, dict[str, object]]: ...
 
     @abstractmethod
     def transform_update_vector_store_file_response(
         self,
         *,
         response: httpx.Response,
-    ) -> VectorStoreFileObject:
-        ...
+    ) -> VectorStoreFileObject: ...
 
     @abstractmethod
     def transform_delete_vector_store_file_request(
@@ -182,23 +169,21 @@ class BaseVectorStoreFilesConfig(ABC):
         vector_store_id: str,
         file_id: str,
         api_base: str,
-    ) -> Tuple[str, Dict[str, Any]]:
-        ...
+    ) -> tuple[str, dict[str, object]]: ...
 
     @abstractmethod
     def transform_delete_vector_store_file_response(
         self,
         *,
         response: httpx.Response,
-    ) -> VectorStoreFileDeleteResponse:
-        ...
+    ) -> VectorStoreFileDeleteResponse: ...
 
     def get_error_class(
         self,
         *,
         error_message: str,
         status_code: int,
-        headers: Union[Dict[str, Any], httpx.Headers],
+        headers: dict[str, Any] | httpx.Headers,
     ) -> BaseLLMException:
         from ..chat.transformation import BaseLLMException
 
@@ -211,16 +196,16 @@ class BaseVectorStoreFilesConfig(ABC):
     def sign_request(
         self,
         *,
-        headers: Dict[str, str],
-        optional_params: Dict[str, Any],
-        request_data: Dict[str, Any],
+        headers: dict[str, str],
+        optional_params: Mapping[str, object],
+        request_data: Mapping[str, object],
         api_base: str,
-        api_key: Optional[str] = None,
-    ) -> Tuple[Dict[str, str], Optional[bytes]]:
+        api_key: str | None = None,
+    ) -> tuple[dict[str, str], bytes | None]:
         return headers, None
 
     def prepare_chunking_strategy(
         self,
-        chunking_strategy: Optional[VectorStoreFileChunkingStrategy],
-    ) -> Optional[VectorStoreFileChunkingStrategy]:
+        chunking_strategy: VectorStoreFileChunkingStrategy | None,
+    ) -> VectorStoreFileChunkingStrategy | None:
         return chunking_strategy

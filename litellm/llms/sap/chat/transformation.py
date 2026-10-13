@@ -1,12 +1,14 @@
 """
 Translate from OpenAI's `/v1/chat/completions` to SAP Generative AI Hub's Orchestration Service`v2/completion`
 """
-from typing import List, Optional, Union, Dict, Tuple, Any, TYPE_CHECKING, Iterator, AsyncIterator
+
+from collections.abc import AsyncIterator, Iterator
 from functools import cached_property
-import litellm
+from typing import TYPE_CHECKING, Any, Final, Union
+
 import httpx
 
-
+import litellm
 from litellm.types.llms.openai import AllMessageValues
 from litellm.types.utils import ModelResponse
 
@@ -14,60 +16,131 @@ from ...openai.chat.gpt_transformation import OpenAIGPTConfig
 
 if TYPE_CHECKING:
     from litellm.litellm_core_utils.litellm_logging import Logging as _LiteLLMLoggingObj
+    from litellm.litellm_core_utils.tokenizer import Encoding as Tokenizer
 
     LiteLLMLoggingObj = _LiteLLMLoggingObj
 else:
     LiteLLMLoggingObj = Any
 
 from ..credentials import get_token_creator
+from .handler import (
+    AsyncSAPStreamIterator,
+    GenAIHubOrchestrationError,
+    SAPStreamIterator,
+)
 from .models import (
-    SAPMessage,
-    SAPAssistantMessage,
-    SAPToolChatMessage,
     ChatCompletionTool,
-    ResponseFormatJSONSchema,
+    ChatMessage,
+    OrchestrationRequest,
     ResponseFormat,
+    ResponseFormatJSONSchema,
+    SAPAssistantMessage,
+    SAPMessage,
+    SAPToolChatMessage,
     SAPUserMessage,
 )
-from .handler import GenAIHubOrchestrationError, AsyncSAPStreamIterator, SAPStreamIterator
 
-def validate_dict(data: dict, model) -> dict:
-    return model(**data).model_dump(by_alias=True)
+# Keys routed outside SAP orchestration `model.params` (prompt, stream, fallbacks, etc.)
+_SAP_MODEL_PARAMS_EXCLUDED_KEYS: Final[frozenset[str]] = frozenset(
+    {
+        "tools",
+        "tool_choice",
+        "stream_options",
+        "fallback_sap_modules",
+        "placeholder_values",
+        "model_version",
+    }
+)
+
+
+def validate_dict(
+    data: dict, model: type
+) -> dict:  # mutable-ok: pydantic validation boundary; both input and output are untyped wire dicts
+    return model(**data).model_dump(by_alias=True, exclude_unset=True)
+
+
+def _fold_message_cache_control(
+    message: dict[str, object],
+) -> dict[str, object]:
+    """Move a message-level cache_control marker onto the content block.
+
+    litellm's cache_control_injection_points hook attaches cache_control to the
+    message dict itself when content is a plain string.  The SAP message models
+    have no such top-level field, so it would be silently dropped.  When content
+    is a string, promote it to a one-element list so the marker survives.
+    When content is already a non-empty list whose last element is a
+        dict, propagate the marker onto that element — it marks the cache
+    breakpoint for the whole block.  In all other cases (empty list, None,
+    unrecognized type) the marker is silently dropped.
+    """
+    cache_control = message.get("cache_control")
+    if cache_control is None:
+        return message
+    base = {k: v for k, v in message.items() if k != "cache_control"}
+    content = message.get("content")
+    if isinstance(content, str):
+        base["content"] = [{"type": "text", "text": content, "cache_control": cache_control}]
+        return base
+    if isinstance(content, list) and content and isinstance(content[-1], dict):
+        base["content"] = [
+            *content[:-1],
+            {**content[-1], "cache_control": cache_control},
+        ]
+        return base
+    return base
+
+
+def _message_role_mapping(role: str) -> type[ChatMessage]:
+    return {
+        "user": SAPUserMessage,
+        "assistant": SAPAssistantMessage,
+        "tool": SAPToolChatMessage,
+    }.get(role, SAPMessage)
+
+
+def _messages_to_sap_template(messages: list[AllMessageValues]) -> list:
+    template: Final = []
+    for message in messages:
+        folded_message = _fold_message_cache_control(message)
+        message_role_class = _message_role_mapping(str(folded_message["role"]))
+        validated_message = validate_dict(folded_message, message_role_class)
+        template.append(validated_message)
+    return template
 
 
 class GenAIHubOrchestrationConfig(OpenAIGPTConfig):
-    frequency_penalty: Optional[int] = None
-    function_call: Optional[Union[str, dict]] = None
-    functions: Optional[list] = None
-    logit_bias: Optional[dict] = None
-    max_tokens: Optional[int] = None
-    n: Optional[int] = None
-    presence_penalty: Optional[int] = None
-    stop: Optional[Union[str, list]] = None
-    temperature: Optional[int] = None
-    top_p: Optional[int] = None
-    response_format: Optional[dict] = None
-    tools: Optional[list] = None
-    tool_choice: Optional[Union[str, dict]] = None  #
+    frequency_penalty: int | None = None
+    function_call: str | dict | None = None
+    functions: list | None = None
+    logit_bias: dict | None = None
+    max_tokens: int | None = None
+    n: int | None = None
+    presence_penalty: int | None = None
+    stop: str | list | None = None
+    temperature: int | None = None
+    top_p: int | None = None
+    response_format: dict | None = None
+    tools: list | None = None
+    tool_choice: str | dict | None = None
     model_version: str = "latest"
 
     def __init__(
         self,
-        frequency_penalty: Optional[int] = None,
-        function_call: Optional[Union[str, dict]] = None,
-        functions: Optional[list] = None,
-        logit_bias: Optional[dict] = None,
-        max_tokens: Optional[int] = None,
-        n: Optional[int] = None,
-        presence_penalty: Optional[int] = None,
-        stop: Optional[Union[str, list]] = None,
-        temperature: Optional[int] = None,
-        top_p: Optional[int] = None,
-        response_format: Optional[dict] = None,
-        tools: Optional[list] = None,
-        tool_choice: Optional[Union[str, dict]] = None,
+        frequency_penalty: int | None = None,
+        function_call: str | dict | None = None,
+        functions: list | None = None,
+        logit_bias: dict | None = None,
+        max_tokens: int | None = None,
+        n: int | None = None,
+        presence_penalty: int | None = None,
+        stop: str | list | None = None,
+        temperature: int | None = None,
+        top_p: int | None = None,
+        response_format: dict | None = None,
+        tools: list | None = None,
+        tool_choice: str | dict | None = None,
     ) -> None:
-        locals_ = locals().copy()
+        locals_: Final = locals().copy()
         for key, value in locals_.items():
             if key != "self" and value is not None:
                 setattr(self.__class__, key, value)
@@ -75,18 +148,17 @@ class GenAIHubOrchestrationConfig(OpenAIGPTConfig):
         self._base_url = None
         self._resource_group = None
 
-    def run_env_setup(self, service_key: Optional[str] = None) -> None:
+    def run_env_setup(self, service_key: str | None = None) -> None:
         try:
-            self.token_creator, self._base_url, self._resource_group = get_token_creator(service_key) # type: ignore
+            self.token_creator, self._base_url, self._resource_group = get_token_creator(service_key)
         except ValueError as err:
             raise GenAIHubOrchestrationError(status_code=400, message=err.args[0])
 
-
     @property
-    def headers(self) -> Dict[str, str]:
+    def headers(self) -> dict[str, str]:
         if self.token_creator is None:
             self.run_env_setup()
-        access_token = self.token_creator() # type: ignore
+        access_token = self.token_creator()  # pyright: ignore[reportOptionalCall]  # run_env_setup set it or raised
         return {
             "Authorization": access_token,
             "AI-Resource-Group": self.resource_group,
@@ -98,28 +170,25 @@ class GenAIHubOrchestrationConfig(OpenAIGPTConfig):
     def base_url(self) -> str:
         if self._base_url is None:
             self.run_env_setup()
-        return self._base_url # type: ignore
-
+        return self._base_url
 
     @property
     def resource_group(self) -> str:
         if self._resource_group is None:
             self.run_env_setup()
-        return self._resource_group # type: ignore
+        return self._resource_group
 
     @cached_property
     def deployment_url(self) -> str:
         # Keep a short, tight client lifecycle here to avoid fd leaks
-        client = litellm.module_level_client
+        client: Final = litellm.module_level_client
         # with httpx.Client(timeout=30) as client:
-        deployments = client.get(
-            f"{self.base_url}/lm/deployments", headers=self.headers
-        ).json()
-        valid: List[Tuple[str, str]] = []
+        deployments: Final = client.get(f"{self.base_url}/lm/deployments", headers=self.headers).json()
+        valid: Final[list[tuple[str, str]]] = []
         for dep in deployments.get("resources", []):
             if dep.get("scenarioId") == "orchestration":
                 cfg = client.get(
-                    f'{self.base_url}/lm/configurations/{dep["configurationId"]}',
+                    f"{self.base_url}/lm/configurations/{dep['configurationId']}",
                     headers=self.headers,
                 ).json()
                 if cfg.get("executableId") == "orchestration":
@@ -132,7 +201,7 @@ class GenAIHubOrchestrationConfig(OpenAIGPTConfig):
         return super().get_config()
 
     def get_supported_openai_params(self, model):
-        params = [
+        params: Final = [
             "frequency_penalty",
             "logit_bias",
             "logprobs",
@@ -169,127 +238,165 @@ class GenAIHubOrchestrationConfig(OpenAIGPTConfig):
             params.remove("tool_choice")
         return params
 
-
     def validate_environment(
         self,
         headers: dict,
         model: str,
-        messages: List[AllMessageValues],
+        messages: list[AllMessageValues],
         optional_params: dict,
         litellm_params: dict,
-        api_key: Optional[str] = None,
-        api_base: Optional[str] = None,
+        api_key: str | None = None,
+        api_base: str | None = None,
     ) -> dict:
         if api_key:
             self.run_env_setup(api_key)
         return self.headers
 
     def get_complete_url(
-            self,
-            api_base: Optional[str],
-            api_key: Optional[str],
-            model: str,
-            optional_params: dict,
-            litellm_params: dict,
-            stream: Optional[bool] = None,
-    ):
-        api_base_ = f"{self.deployment_url}/v2/completion"
-        return api_base_
-
-    def transform_request(
         self,
+        api_base: str | None,
+        api_key: str | None,
         model: str,
-        messages: List[Dict[str, str]], # type: ignore
         optional_params: dict,
         litellm_params: dict,
-        headers: dict,
-    ) -> dict:
-        # Filter out parameters that are not valid model params for SAP Orchestration API
-        # - tools, model_version, deployment_url: handled separately
-        excluded_params = {"tools", "model_version", "deployment_url"}
+        stream: bool | None = None,
+    ):
+        api_base_: Final = f"{self.deployment_url}/v2/completion"
+        return api_base_
 
+    def _build_prompt_module(
+        self,
+        model_name: str,
+        template_messages: list[dict[str, str]],
+        params: dict,
+    ) -> dict:
         # Filter strict for GPT models only - SAP AI Core doesn't accept it as a model param
         # LangChain agents pass strict=true at top level, which fails for GPT models
         # Anthropic models accept strict, so preserve it for them
-        if model.startswith("gpt"):
-            excluded_params.add("strict")
+        if model_name.startswith("gpt") and "strict" in params:
+            params.pop("strict")
 
-        model_params = {
-            k: v for k, v in optional_params.items() if k not in excluded_params
-        }
+        model_version: Final = params.pop("model_version", "latest")
 
-        model_version = optional_params.pop("model_version", "latest")
-        template = []
-        for message in messages:
-            if message["role"] == "user":
-                template.append(validate_dict(message, SAPUserMessage))
-            elif message["role"] == "assistant":
-                template.append(validate_dict(message, SAPAssistantMessage))
-            elif message["role"] == "tool":
-                template.append(validate_dict(message, SAPToolChatMessage))
-            else:
-                template.append(validate_dict(message, SAPMessage))
-
-        tools_ = optional_params.pop("tools", [])
+        tools_ = params.pop("tools", [])
         tools_ = [validate_dict(tool, ChatCompletionTool) for tool in tools_]
-        if tools_ != []:
-            tools = {"tools": tools_}
-        else:
-            tools = {}
+        tools: Final = {"tools": tools_} if tools_ else {}
 
-        response_format = model_params.pop("response_format", {})
-        resp_type = response_format.get("type", None)
+        response_format = params.pop("response_format", {})
+        resp_type: Final = response_format.get("type", None)
         if resp_type:
-            if resp_type== "json_schema":
+            if resp_type == "json_schema":
                 response_format = validate_dict(response_format, ResponseFormatJSONSchema)
             else:
                 response_format = validate_dict(response_format, ResponseFormat)
             response_format = {"response_format": response_format}
-        model_params.pop("stream", False)
-        stream_config = {}
-        if "stream_options" in model_params:
-            # stream_config["enabled"] = True
-            stream_options = model_params.pop("stream_options", {})
-            stream_config["chunk_size"] = stream_options.get("chunk_size", 100)
-            if "delimiters" in stream_options:
-                stream_config["delimiters"] = stream_options.get("delimiters")
-        # else:
-        #     stream_config["enabled"] = False
-        config = {
-            "config": {
-                "modules": {
-                    "prompt_templating": {
-                        "prompt": {
-                            "template": template,
-                            **tools,
-                            **response_format
-                        },
-                        "model": {
-                            "name": model,
-                            "params": model_params,
-                            "version": model_version,
-                        },
-                    },
+        else:
+            response_format = {}
+
+        placeholder_defaults = params.pop("placeholder_defaults", {})
+        placeholder_defaults = {"defaults": placeholder_defaults} if placeholder_defaults else {}
+
+        optional_modules: Final = {}
+        optional_modules_lst: Final = ["grounding", "masking", "filtering", "translation"]
+        for module in optional_modules_lst:
+            if params.get(module, None) is not None:
+                optional_modules[module] = params.pop(module)
+
+        return {
+            "prompt_templating": {
+                "prompt": {
+                    "template": template_messages,
+                    **placeholder_defaults,
+                    **tools,
+                    **response_format,
                 },
-                "stream": stream_config,
-            }
+                "model": {
+                    "name": model_name,
+                    "params": params,
+                    "version": model_version,
+                },
+            },
+            **optional_modules,
         }
 
-        return config
+    def transform_request(
+        self,
+        model: str,
+        messages: list[AllMessageValues],
+        optional_params: dict,
+        litellm_params: dict,
+        headers: dict,
+    ) -> dict:
+        optional_params = dict(optional_params)
+        optional_params.pop("deployment_url", None)
+
+        template: Final = _messages_to_sap_template(messages)
+
+        placeholder_values: Final = optional_params.pop("placeholder_values", None)
+        fallback_modules: Final = optional_params.pop("fallback_sap_modules", [])
+
+        optional_params.pop("stream", None)
+        stream_config: Final[dict] = {}
+        if "stream_options" in optional_params:
+            stream_options: Final = optional_params.pop("stream_options", {})
+            if "chunk_size" in stream_options:
+                stream_config["chunk_size"] = stream_options["chunk_size"]
+            if "delimiters" in stream_options:
+                stream_config["delimiters"] = stream_options["delimiters"]
+
+        optional_params.pop("tool_choice", None)
+
+        modules: Final = [
+            self._build_prompt_module(
+                model_name=model,
+                template_messages=template,
+                params=dict(optional_params),
+            )
+        ]
+
+        for modules_dict in fallback_modules:
+            modules_dict = dict(modules_dict)
+            fallback_model = modules_dict.pop("model", None)
+            if fallback_model is None:
+                raise ValueError("Each entry in `fallback_sap_modules` must include a 'model' key.")
+            fallback_model = fallback_model.removeprefix("sap/")
+            fallback_template = modules_dict.pop("messages", [])
+
+            modules.append(
+                self._build_prompt_module(
+                    model_name=fallback_model,
+                    template_messages=fallback_template,
+                    params=modules_dict,
+                )
+            )
+
+        config_payload: Final[dict[str, object]] = {
+            "modules": modules if len(modules) > 1 else modules[0],
+        }
+        if stream_config:
+            config_payload["stream"] = stream_config
+
+        request_body: Final[dict[str, object]] = {"config": config_payload}
+        if placeholder_values is not None:
+            request_body["placeholder_values"] = placeholder_values
+
+        body: Final = validate_dict(request_body, OrchestrationRequest)
+
+        return body
 
     def transform_response(
-            self,
-            model: str,
-            raw_response: httpx.Response,
-            model_response: ModelResponse,
-            logging_obj: LiteLLMLoggingObj,
-            request_data: dict,
-            messages: List[AllMessageValues],
-            optional_params: dict,
-            litellm_params: dict,
-            encoding: Any,
-            api_key: Optional[str] = None,
-            json_mode: Optional[bool] = None,
+        self,
+        model: str,
+        raw_response: httpx.Response,
+        model_response: ModelResponse,
+        logging_obj: LiteLLMLoggingObj,
+        request_data: dict,
+        messages: list[AllMessageValues],
+        optional_params: dict,
+        litellm_params: dict,
+        encoding: "Tokenizer | None",
+        api_key: str | None = None,
+        json_mode: bool | None = None,
     ) -> ModelResponse:
         logging_obj.post_call(
             input=messages,
@@ -303,7 +410,7 @@ class GenAIHubOrchestrationConfig(OpenAIGPTConfig):
         # SAP GenAI Hub with Anthropic models sometimes wraps JSON in ```json ... ```
         # based on prompt phrasing. GPT/Gemini models don't exhibit this behavior,
         # so we gate the stripping to avoid accidentally modifying valid responses.
-        response_format = optional_params.get("response_format", {})
+        response_format: Final = optional_params.get("response_format", {})
         if response_format.get("type") in ("json_object", "json_schema"):
             if model.startswith("anthropic"):
                 response = self._strip_markdown_json(response)
@@ -323,19 +430,19 @@ class GenAIHubOrchestrationConfig(OpenAIGPTConfig):
             if choice.message and choice.message.content:
                 content = choice.message.content.strip()
                 # Match ```json ... ``` or ``` ... ```
-                match = re.match(r'^```(?:json)?\s*\n?(.*?)\n?```$', content, re.DOTALL)
+                match = re.match(r"^```(?:json)?\s*\n?(.*?)\n?```$", content, re.DOTALL)
                 if match:
                     choice.message.content = match.group(1).strip()
 
         return response
 
     def get_model_response_iterator(
-            self,
-            streaming_response: Union[Iterator[str], AsyncIterator[str], "ModelResponse"],
-            sync_stream: bool,
-            json_mode: Optional[bool] = False,
+        self,
+        streaming_response: Union[Iterator[str], AsyncIterator[str], "ModelResponse"],
+        sync_stream: bool,
+        json_mode: bool | None = False,
     ):
         if sync_stream:
-            return SAPStreamIterator(response=streaming_response)  # type: ignore
+            return SAPStreamIterator(response=streaming_response)  # pyright: ignore[reportArgumentType]  # streaming_response type matches at runtime
         else:
-            return AsyncSAPStreamIterator(response=streaming_response)  # type: ignore
+            return AsyncSAPStreamIterator(response=streaming_response)  # pyright: ignore[reportArgumentType]  # streaming_response type matches at runtime

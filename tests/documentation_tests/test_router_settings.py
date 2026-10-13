@@ -2,11 +2,7 @@ import os
 import re
 import inspect
 from typing import Type
-import sys
 
-sys.path.insert(
-    0, os.path.abspath("../..")
-)  # Adds the parent directory to the system path
 import litellm
 
 
@@ -37,14 +33,12 @@ print(router_init_params)
 router_init_params.remove("model_list")
 
 # Parse the documentation to extract documented keys
-repo_base = "./"
-print(os.listdir(repo_base))
-docs_path = (
-    "./docs/my-website/docs/proxy/config_settings.md"  # Path to the documentation
+_test_dir = os.path.dirname(os.path.abspath(__file__))
+_repo_root = os.path.abspath(os.path.join(_test_dir, "..", ".."))
+print(os.listdir(_repo_root))
+docs_path = os.path.join(
+    _repo_root, "docs", "my-website", "docs", "proxy", "config_settings.md"
 )
-# docs_path = (
-#     "../../docs/my-website/docs/proxy/config_settings.md"  # Path to the documentation
-# )
 documented_keys = set()
 try:
     with open(docs_path, "r", encoding="utf-8") as docs_file:
@@ -57,13 +51,11 @@ try:
         if general_settings_section:
             # Extract the table rows, which contain the documented keys
             table_content = general_settings_section.group(1)
-            doc_key_pattern = re.compile(
-                r"\|\s*([^\|]+?)\s*\|"
-            )  # Capture the key from each row of the table
+            doc_key_pattern = re.compile(r"^\|\s*([^\|]+?)\s*\|", re.MULTILINE)
             documented_keys.update(doc_key_pattern.findall(table_content))
 except Exception as e:
     raise Exception(
-        f"Error reading documentation: {e}, \n repo base - {os.listdir(repo_base)}"
+        f"Error reading documentation: {e}, \n repo base - {os.listdir(_repo_root)}"
     )
 
 

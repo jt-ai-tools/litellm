@@ -3,7 +3,8 @@ Calls SearchAPI.io's Google Search API endpoint.
 
 SearchAPI.io API Reference: https://www.searchapi.io/docs/google
 """
-from typing import Dict, List, Literal, Optional, TypedDict, Union, cast
+
+from typing import Final, Literal, TypedDict, cast
 from urllib.parse import urlencode
 
 import httpx
@@ -19,6 +20,7 @@ from litellm.secret_managers.main import get_secret_str
 
 class _SearchAPIRequestRequired(TypedDict):
     """Required fields for SearchAPI.io request."""
+
     engine: str  # Required - search engine (e.g., 'google')
     q: str  # Required - search query
 
@@ -28,6 +30,7 @@ class SearchAPIRequest(_SearchAPIRequestRequired, total=False):
     SearchAPI.io request format for Google Search.
     Based on: https://www.searchapi.io/docs/google
     """
+
     kgmid: str  # Optional - Knowledge Graph identifier
     device: str  # Optional - device type ('desktop', 'mobile', 'tablet')
     location: str  # Optional - geographic location
@@ -50,43 +53,47 @@ class SearchAPIRequest(_SearchAPIRequestRequired, total=False):
 
 class SearchAPIConfig(BaseSearchConfig):
     SEARCHAPI_API_BASE = "https://www.searchapi.io/api/v1/search"
-    
+
     @staticmethod
     def ui_friendly_name() -> str:
         return "SearchAPI.io (Google Search)"
-    
+
     def get_http_method(self) -> Literal["GET", "POST"]:
         """
         SearchAPI.io uses GET requests for search.
         """
         return "GET"
-    
+
     def validate_environment(
         self,
-        headers: Dict,
-        api_key: Optional[str] = None,
-        api_base: Optional[str] = None,
+        headers: dict,
+        api_key: str | None = None,
+        api_base: str | None = None,
         **kwargs,
-    ) -> Dict:
+    ) -> dict:
         """
         Validate environment and return headers.
         """
-        api_key = api_key or get_secret_str("SEARCHAPI_API_KEY")
-        
+        api_key = self.resolve_server_api_key(
+            caller_api_key=api_key,
+            caller_api_base=api_base,
+            key_env_vars=("SEARCHAPI_API_KEY",),
+            base_env_var="SEARCHAPI_API_BASE",
+            default_api_base=self.SEARCHAPI_API_BASE,
+        )
+
         if not api_key:
-            raise ValueError(
-                "SEARCHAPI_API_KEY is not set. Set `SEARCHAPI_API_KEY` environment variable."
-            )
-        
+            raise ValueError("SEARCHAPI_API_KEY is not set. Set `SEARCHAPI_API_KEY` environment variable.")
+
         headers["Content-Type"] = "application/json"
-        
+
         return headers
 
     def get_complete_url(
         self,
-        api_base: Optional[str],
+        api_base: str | None,
         optional_params: dict,
-        data: Optional[Union[Dict, List[Dict]]] = None,
+        data: dict | list[dict] | None = None,
         **kwargs,
     ) -> str:
         """
@@ -98,20 +105,21 @@ class SearchAPIConfig(BaseSearchConfig):
 
         # Build query parameters from the transformed request body
         if data and isinstance(data, dict) and "_searchapi_params" in data:
-            params = data["_searchapi_params"]
-            query_string = urlencode(params, doseq=True)
+            params: Final = data["_searchapi_params"]
+            query_string: Final = urlencode(params, doseq=True)
             return f"{api_base}?{query_string}"
 
         return api_base
 
     def transform_search_request(
         self,
-        query: Union[str, List[str]],
+        query: str | list[str],
         optional_params: dict,
-        api_key: Optional[str] = None,
-        search_engine_id: Optional[str] = None,
+        api_key: str | None = None,
+        api_base: str | None = None,
+        search_engine_id: str | None = None,
         **kwargs,
-    ) -> Dict:
+    ) -> dict:
         """
         Transform Search request to SearchAPI.io format.
 
@@ -132,35 +140,39 @@ class SearchAPIConfig(BaseSearchConfig):
         if isinstance(query, list):
             query = " ".join(query)
 
-        # Get API key from parameter or environment
-        api_key = api_key or get_secret_str("SEARCHAPI_API_KEY")
+        # Get API key from parameter or environment. The key is sent as a query
+        # param to api_base, so resolve it host-aware to avoid leaking a
+        # server-managed key to a caller-supplied host.
+        api_key = self.resolve_server_api_key(
+            caller_api_key=api_key,
+            caller_api_base=api_base,
+            key_env_vars=("SEARCHAPI_API_KEY",),
+            base_env_var="SEARCHAPI_API_BASE",
+            default_api_base=self.SEARCHAPI_API_BASE,
+        )
         if not api_key:
-            raise ValueError(
-                "SEARCHAPI_API_KEY is not set. Set `SEARCHAPI_API_KEY` environment variable."
-            )
+            raise ValueError("SEARCHAPI_API_KEY is not set. Set `SEARCHAPI_API_KEY` environment variable.")
 
-        request_data: SearchAPIRequest = {
+        request_data: Final[SearchAPIRequest] = {
             "engine": "google",
             "q": query,
         }
 
         # Add API key to request
-        result_data = dict(request_data)
+        result_data: Final = dict(request_data)
         result_data["api_key"] = api_key
 
         # Transform unified spec parameters to SearchAPI.io format
         if "max_results" in optional_params:
             # Google now returns constant 10 results, but we can still set num
-            num_results = min(optional_params["max_results"], 10)
+            num_results: Final = min(optional_params["max_results"], 10)
             result_data["num"] = num_results
 
         if "search_domain_filter" in optional_params:
             # Convert to multiple "site:domain" clauses
-            domains = optional_params["search_domain_filter"]
+            domains: Final = optional_params["search_domain_filter"]
             if isinstance(domains, list) and len(domains) > 0:
-                result_data["q"] = self._append_domain_filters(
-                    str(result_data["q"]), domains
-                )
+                result_data["q"] = self._append_domain_filters(str(result_data["q"]), domains)
 
         if "country" in optional_params:
             # Map to gl parameter
@@ -168,10 +180,7 @@ class SearchAPIConfig(BaseSearchConfig):
 
         # Pass through all other SearchAPI.io-specific parameters
         for param, value in optional_params.items():
-            if (
-                param not in self.get_supported_perplexity_optional_params()
-                and param not in result_data
-            ):
+            if param not in self.get_supported_perplexity_optional_params() and param not in result_data:
                 result_data[param] = value
 
         # Store params in special key for URL building (GET request)
@@ -180,34 +189,34 @@ class SearchAPIConfig(BaseSearchConfig):
         }
 
     @staticmethod
-    def _append_domain_filters(query: str, domains: List[str]) -> str:
+    def _append_domain_filters(query: str, domains: list[str]) -> str:
         """
         Add site: filters to restrict search to specific domains.
         """
-        domain_clauses = [f"site:{domain}" for domain in domains]
-        domain_query = " OR ".join(domain_clauses)
+        domain_clauses: Final = [f"site:{domain}" for domain in domains]
+        domain_query: Final = " OR ".join(domain_clauses)
 
         return f"({query}) AND ({domain_query})"
 
     def transform_search_response(
         self,
         raw_response: httpx.Response,
-        logging_obj: Optional[LiteLLMLoggingObj],
+        logging_obj: LiteLLMLoggingObj | None,
         **kwargs,
     ) -> SearchResponse:
         """
         Transform SearchAPI.io response to LiteLLM unified SearchResponse format.
-        
+
         SearchAPI.io → LiteLLM mappings:
         - organic_results[].title → SearchResult.title
         - organic_results[].link → SearchResult.url
         - organic_results[].snippet → SearchResult.snippet
         - organic_results[].date → SearchResult.date
         """
-        response_json = raw_response.json()
+        response_json: Final = raw_response.json()
 
         # Transform results to SearchResult objects
-        results: List[SearchResult] = []
+        results: Final[list[SearchResult]] = []
 
         # Process organic results
         for result in response_json.get("organic_results", []):
@@ -215,7 +224,7 @@ class SearchAPIConfig(BaseSearchConfig):
             url = result.get("link", "")
             snippet = result.get("snippet", "")
             date = result.get("date")  # SearchAPI.io provides date in some results
-            
+
             search_result = SearchResult(
                 title=title,
                 url=url,

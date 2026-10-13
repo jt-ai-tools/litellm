@@ -2,7 +2,7 @@
  * Utility functions for working with navigation pages
  */
 
-import { menuGroups } from "./leftnav";
+import { labelText, menuGroups } from "./leftnav";
 import { pageDescriptions, PageMetadata } from "./page_metadata";
 import { internalUserRoles } from "@/utils/roles";
 
@@ -16,15 +16,15 @@ const isPageAccessibleToInternalUsers = (pageRoles?: string[]): boolean => {
   if (!pageRoles || pageRoles.length === 0) {
     return true; // No role restrictions
   }
-  
+
   // Check if any of the page's roles match internal user roles
-  return pageRoles.some(role => internalUserRoles.includes(role));
+  return pageRoles.some((role) => internalUserRoles.includes(role));
 };
 
 /**
  * Get all available pages from the navigation menu configuration
  * Used by UI Settings to display available pages for visibility control
- * 
+ *
  * IMPORTANT: Only returns pages that internal users can access.
  * Pages restricted to admin-only roles are excluded because internal users
  * cannot see them regardless of the UI visibility setting.
@@ -43,10 +43,9 @@ export const getAvailablePages = (): PageMetadata[] => {
         item.page !== "settings" &&
         isPageAccessibleToInternalUsers(item.roles)
       ) {
-        const label = typeof item.label === "string" ? item.label : item.key;
         pages.push({
           page: item.page,
-          label: label,
+          label: labelText(item),
           group: group.groupLabel,
           description: pageDescriptions[item.page] || "No description available",
         });
@@ -54,14 +53,13 @@ export const getAvailablePages = (): PageMetadata[] => {
 
       // Add children items (also skip those internal users cannot access)
       if (item.children) {
-        const parentLabel = typeof item.label === "string" ? item.label : item.key;
+        const parentLabel = labelText(item);
         item.children.forEach((child) => {
           // Include if internal users can access
           if (isPageAccessibleToInternalUsers(child.roles)) {
-            const childLabel = typeof child.label === "string" ? child.label : child.key;
             pages.push({
               page: child.page,
-              label: childLabel,
+              label: labelText(child),
               group: `${group.groupLabel} > ${parentLabel}`,
               description: pageDescriptions[child.page] || "No description available",
             });

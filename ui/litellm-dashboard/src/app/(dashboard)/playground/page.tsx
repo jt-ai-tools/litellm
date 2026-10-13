@@ -1,15 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import AgentBuilderView from "@/components/playground/chat_ui/AgentBuilderView";
-import ChatUI from "@/components/playground/chat_ui/ChatUI";
-import CompareUI from "@/components/playground/compareUI/CompareUI";
-import ComplianceUI from "@/components/playground/complianceUI/ComplianceUI";
-import { TabGroup, TabList, Tab, TabPanels, TabPanel } from "@tremor/react";
+import AgentBuilderView from "@/app/(dashboard)/playground/components/chat_ui/AgentBuilderView";
+import ChatUI from "@/app/(dashboard)/playground/components/chat_ui/ChatUI";
+import CompareUI from "@/app/(dashboard)/playground/components/compareUI/CompareUI";
+import ComplianceUI from "@/app/(dashboard)/playground/components/complianceUI/ComplianceUI";
+import SystemOneUI from "@/app/(dashboard)/playground/components/systemOneUI/SystemOneUI";
+import BetaBadge from "@/components/BetaBadge";
+import { DeprecationBanner } from "@/components/DeprecationBanner";
 import useAuthorized from "@/app/(dashboard)/hooks/useAuthorized";
 import { fetchProxySettings } from "@/utils/proxyUtils";
-import { useUIConfig } from "@/app/(dashboard)/hooks/uiConfig/useUIConfig";
-import { MessageOutlined, CloseOutlined } from "@ant-design/icons";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useUrlTab } from "@/hooks/useUrlTab";
+
+const PLAYGROUND_TABS = ["chat", "compare", "compliance", "system-one", "agent-builder"] as const;
 
 interface ProxySettings {
   PROXY_BASE_URL?: string;
@@ -17,14 +21,9 @@ interface ProxySettings {
 }
 
 export default function PlaygroundPage() {
-  const { accessToken, userRole, userId, disabledPersonalKeyCreation, token } = useAuthorized();
+  const { accessToken, userRole, userId, disabledPersonalKeyCreation, token, isViewOnly } = useAuthorized();
   const [proxySettings, setProxySettings] = useState<ProxySettings | undefined>(undefined);
-  const [chatBannerDismissed, setChatBannerDismissed] = useState(false);
-  const { data: uiConfig } = useUIConfig();
-  const uiRoot = uiConfig?.server_root_path && uiConfig.server_root_path !== "/"
-    ? uiConfig.server_root_path.replace(/\/+$/, "")
-    : "";
-  const chatHref = `${uiRoot}/ui/chat`;
+  const [activeTab, setActiveTab] = useUrlTab(PLAYGROUND_TABS, "chat");
 
   useEffect(() => {
     const initializeProxySettings = async () => {
@@ -42,75 +41,46 @@ export default function PlaygroundPage() {
     initializeProxySettings();
   }, [accessToken]);
 
+  if (isViewOnly) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-8 text-center">
+        <h1 className="text-2xl font-semibold">Access Denied</h1>
+        <p className="text-muted-foreground">
+          Your role does not have access to the Playground. Ask your proxy admin for access to test models.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-full w-full flex flex-col">
-      {!chatBannerDismissed && (
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          padding: "10px 20px",
-          background: "#f0f9ff",
-          borderBottom: "1px solid #bae6fd",
-          flexShrink: 0,
-        }}>
-          <span style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: "#fff",
-            background: "#0ea5e9",
-            borderRadius: 4,
-            padding: "2px 7px",
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            flexShrink: 0,
-            lineHeight: "18px",
-          }}>
-            New
-          </span>
-          <span style={{ flex: 1, color: "#0c4a6e", fontSize: 13.5, lineHeight: 1.5 }}>
-            <strong>Chat UI</strong>
-            {" "}— a ChatGPT-like interface for your users to chat with AI models and MCP tools. Share it with your team.
-          </span>
-          <a
-            href={chatHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-              padding: "5px 14px",
-              borderRadius: 6,
-              background: "#0ea5e9",
-              color: "#fff",
-              fontSize: 12.5,
-              fontWeight: 600,
-              textDecoration: "none",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
-          >
-            Open Chat UI →
-          </a>
-          <button
-            onClick={() => setChatBannerDismissed(true)}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", padding: 4, flexShrink: 0, lineHeight: 1 }}
-            aria-label="Dismiss"
-          >
-            <CloseOutlined style={{ fontSize: 13 }} />
-          </button>
-        </div>
-      )}
-    <TabGroup className="w-full" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-      <TabList className="mb-0">
-        <Tab>Chat</Tab>
-        <Tab>Compare</Tab>
-        <Tab>Compliance</Tab>
-        <Tab>Agent Builder (Experimental)</Tab>
-      </TabList>
-      <TabPanels className="h-full">
-        <TabPanel className="h-full">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="flex min-h-0 min-w-0 flex-1 flex-col gap-0 overflow-hidden"
+      >
+        <TabsList variant="line" className="w-full shrink-0 justify-start overflow-x-auto pb-1">
+          <TabsTrigger value="chat" className="flex-none">
+            Chat
+          </TabsTrigger>
+          <TabsTrigger value="compare" className="flex-none">
+            Compare
+          </TabsTrigger>
+          <TabsTrigger value="compliance" className="flex-none">
+            Compliance
+          </TabsTrigger>
+          <TabsTrigger value="system-one" className="flex-none">
+            <BetaBadge>Decisions</BetaBadge>
+          </TabsTrigger>
+          <TabsTrigger value="agent-builder" className="flex-none">
+            Agent Builder (Experimental)
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent
+          value="chat"
+          className="mt-0 h-full min-h-0 min-w-0 overflow-hidden data-hidden:hidden"
+          keepMounted
+        >
           <ChatUI
             accessToken={accessToken}
             token={token}
@@ -119,14 +89,18 @@ export default function PlaygroundPage() {
             disabledPersonalKeyCreation={disabledPersonalKeyCreation}
             proxySettings={proxySettings}
           />
-        </TabPanel>
-        <TabPanel className="h-full">
+        </TabsContent>
+        <TabsContent value="compare" className="mt-0 h-full data-hidden:hidden" keepMounted>
           <CompareUI accessToken={accessToken} disabledPersonalKeyCreation={disabledPersonalKeyCreation} />
-        </TabPanel>
-        <TabPanel className="h-full">
+        </TabsContent>
+        <TabsContent value="compliance" className="mt-0 h-full data-hidden:hidden" keepMounted>
           <ComplianceUI accessToken={accessToken} disabledPersonalKeyCreation={disabledPersonalKeyCreation} />
-        </TabPanel>
-        <TabPanel className="h-full">
+        </TabsContent>
+        <TabsContent value="system-one" className="mt-0 min-h-0 data-hidden:hidden" keepMounted>
+          <SystemOneUI accessToken={accessToken} disabledPersonalKeyCreation={disabledPersonalKeyCreation} />
+        </TabsContent>
+        <TabsContent value="agent-builder" className="mt-0 h-full data-hidden:hidden" keepMounted>
+          <DeprecationBanner featureName="The Playground's Agent Builder" />
           <AgentBuilderView
             accessToken={accessToken}
             token={token}
@@ -136,9 +110,8 @@ export default function PlaygroundPage() {
             proxySettings={proxySettings}
             customProxyBaseUrl={proxySettings?.LITELLM_UI_API_DOC_BASE_URL ?? proxySettings?.PROXY_BASE_URL}
           />
-        </TabPanel>
-      </TabPanels>
-    </TabGroup>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -14,6 +14,7 @@ export interface Policy {
   updated_at?: string;
   created_by?: string;
   updated_by?: string;
+  definition_location?: "db" | "config";
 }
 
 export interface PolicyCondition {
@@ -24,6 +25,8 @@ export interface PipelineStep {
   guardrail: string;
   on_fail: "block" | "allow" | "next" | "modify_response";
   on_pass: "allow" | "block" | "next" | "modify_response";
+  /** If unset, API/technical errors use on_fail (backward compatible). */
+  on_error?: "block" | "allow" | "next" | "modify_response" | null;
   pass_data?: boolean;
   modify_response_message?: string | null;
 }
@@ -41,10 +44,13 @@ export interface PolicyAttachment {
   keys: string[];
   models: string[];
   tags: string[];
+  priority?: number | null;
+  default?: boolean;
   created_at?: string;
   updated_at?: string;
   created_by?: string;
   updated_by?: string;
+  definition_location?: "db" | "config";
 }
 
 export interface PolicyCreateRequest {
@@ -74,6 +80,8 @@ export interface PolicyAttachmentCreateRequest {
   keys?: string[];
   models?: string[];
   tags?: string[];
+  priority?: number;
+  default?: boolean;
 }
 
 export interface PolicyListResponse {
@@ -94,7 +102,7 @@ export interface PolicyAttachmentListResponse {
 
 export interface PipelineStepResult {
   guardrail_name: string;
-  outcome: "pass" | "fail" | "error";
+  outcome: "pass" | "fail" | "error" | "skip";
   action_taken: string;
   modified_data: Record<string, any> | null;
   error_detail: string | null;

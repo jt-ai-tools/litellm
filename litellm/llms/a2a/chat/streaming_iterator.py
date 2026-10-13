@@ -1,26 +1,27 @@
 """
 A2A Streaming Response Iterator
 """
-from typing import Optional, Union
+
+from typing import Final
 
 from litellm.llms.base_llm.base_model_iterator import BaseModelResponseIterator
 from litellm.types.utils import GenericStreamingChunk, ModelResponseStream
 
-from ..common_utils import extract_text_from_a2a_response
+from ..common_utils import A2AError, extract_text_from_a2a_response
 
 
 class A2AModelResponseIterator(BaseModelResponseIterator):
     """
     Iterator for parsing A2A streaming responses.
-    
+
     Converts A2A JSON-RPC streaming chunks to OpenAI-compatible format.
     """
-    
+
     def __init__(
         self,
         streaming_response,
         sync_stream: bool,
-        json_mode: Optional[bool] = False,
+        json_mode: bool | None = False,
         model: str = "a2a/agent",
     ):
         super().__init__(
@@ -29,11 +30,11 @@ class A2AModelResponseIterator(BaseModelResponseIterator):
             json_mode=json_mode,
         )
         self.model = model
-    
-    def chunk_parser(self, chunk: dict) -> Union[GenericStreamingChunk, ModelResponseStream]:
+
+    def chunk_parser(self, chunk: dict) -> GenericStreamingChunk | ModelResponseStream:
         """
         Parse A2A streaming chunk to OpenAI format.
-        
+
         A2A chunk format:
         {
             "jsonrpc": "2.0",
@@ -44,7 +45,7 @@ class A2AModelResponseIterator(BaseModelResponseIterator):
                 }
             }
         }
-        
+
         Or for tasks:
         {
             "jsonrpc": "2.0",
@@ -55,13 +56,17 @@ class A2AModelResponseIterator(BaseModelResponseIterator):
             }
         }
         """
+        error: Final = chunk.get("error")
+        if isinstance(error, dict):
+            raise A2AError(status_code=500, message=f"A2A error: {error.get('message', 'Unknown error')}")
+
         try:
             # Extract text from A2A response
-            text = extract_text_from_a2a_response(chunk)
-            
+            text: Final = extract_text_from_a2a_response(chunk)
+
             # Determine finish reason
-            finish_reason = self._get_finish_reason(chunk)
-            
+            finish_reason: Final = self._get_finish_reason(chunk)
+
             # Return generic streaming chunk
             return GenericStreamingChunk(
                 text=text,
@@ -81,23 +86,23 @@ class A2AModelResponseIterator(BaseModelResponseIterator):
                 index=0,
                 tool_use=None,
             )
-    
-    def _get_finish_reason(self, chunk: dict) -> Optional[str]:
+
+    def _get_finish_reason(self, chunk: dict) -> str | None:
         """Extract finish reason from A2A chunk"""
-        result = chunk.get("result", {})
-        
+        result: Final = chunk.get("result", {})
+
         # Check for task completion
         if isinstance(result, dict):
-            status = result.get("status", {})
+            status: Final = result.get("status", {})
             if isinstance(status, dict):
-                state = status.get("state")
+                state: Final = status.get("state")
                 if state == "completed":
                     return "stop"
                 elif state == "failed":
                     return "stop"  # Map failed state to 'stop' (valid finish_reason)
-        
+
         # Check for [DONE] marker
         if chunk.get("done") is True:
             return "stop"
-        
+
         return None
